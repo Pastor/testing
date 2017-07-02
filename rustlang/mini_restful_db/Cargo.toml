@@ -1,0 +1,38 @@
+[package]
+name = "mini_restful_db"
+version = "0.1.0"
+authors = ["Андрей <viruszold@mail.ru>"]
+#build = "build.rs"
+
+[[bin]]
+name = "mini_restful_db"
+path = "src/main.rs"
+
+[build-dependencies]
+gcc = "*"
+
+[dependencies]
+#rust-sqlite     = "*"
+rocket          = "0.2.0"
+rocket_codegen  = "0.2.0"
+tera            = "0.7"
+lazy_static     = "*"
+serde           = "0.9"
+serde_derive    = "0.9"
+serde_json      = "0.9"
+chrono = { version = "0.3", features = ["serde"] }
+dotenv          = "0.8.0"
+time            = "*"
+
+[dependencies.rusqlite]
+version = "*"
+features = ["bundled"]
+
+[dependencies.rocket_contrib]
+version = "*"
+default-features = false
+features = ["tera_templates", "json"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
