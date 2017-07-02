@@ -8,8 +8,8 @@ authors = ["Андрей <viruszold@mail.ru>"]
 name = "mini_restful_db"
 path = "src/main.rs"
 
-[build-dependencies]
-gcc = "*"
+#[build-dependencies]
+#gcc = "*"
 
 [dependencies]
 #rust-sqlite     = "*"
@@ -23,6 +23,9 @@ serde_json      = "0.9"
 chrono = { version = "0.3", features = ["serde"] }
 dotenv          = "0.8.0"
 time            = "*"
+
+[dev-dependencies]
+rocket = { version = "0.2.0", features = ["testing"] }
 
 [dependencies.rusqlite]
 version = "*"
