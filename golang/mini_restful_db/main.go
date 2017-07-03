@@ -1,15 +1,14 @@
 package main
 
-import "fmt"
 import (
 	"database/sql"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
-	"time"
-
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"

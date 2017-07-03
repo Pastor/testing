@@ -85,7 +85,7 @@ fn not_found() -> JSON<Value> {
 }
 
 fn rocket() -> rocket::Rocket {
-    let service = db::init();
+    let service = Service::new();
     //    let config = Config::build(Environment::Staging)
     //        .address("0.0.0.0")
     //        .port(8000)
