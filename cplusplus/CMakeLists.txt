@@ -1,0 +1,41 @@
+﻿cmake_minimum_required(VERSION 3.4.1)
+project(cplusplus)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
+if (MSVC)
+    set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} /SUBSYSTEM:CONSOLE /IGNORE:4099")
+    if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+        set(CMAKE_CFLAGS "${CMAKE_CFLAGS} /MDd /bigobj")
+        add_compile_options(/MDd /bigobj)
+    else ()
+        add_definitions(/MT)
+        add_compile_options(/bigobj)
+    endif ()
+    add_definitions(/wd4267)
+    add_definitions(/wd4250)
+    add_definitions(/wd4996)
+elseif (CMAKE_COMPILER_IS_GNUCXX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pedantic -Wp,-w -Wa,-mbig-obj")
+    set(CMAKE_CFLAGS "${CMAKE_CFLAGS} -pedantic -Wp,-w -Wa,-mbig-obj")
+else ()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pedantic -Wp,-w")
+    set(CMAKE_CFLAGS "${CMAKE_CFLAGS} -pedantic -Wp,-w")
+endif ()
+add_subdirectory(3rdparty)
+
+#configure_file(
+#        ${CMAKE_CURRENT_SOURCE_DIR}/src/main/version.rc.in
+#        ${CMAKE_CURRENT_BINARY_DIR}/version.rc
+#        @ONLY
+#)
+#configure_file(
+#        ${CMAKE_CURRENT_SOURCE_DIR}/src/main/version.h.in
+#        ${CMAKE_CURRENT_BINARY_DIR}/version.h
+#        @ONLY
+#)
