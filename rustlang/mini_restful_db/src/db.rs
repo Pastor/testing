@@ -41,6 +41,16 @@ fn get_result(stmt: &mut Statement, params: &[&ToSql]) -> Vec<Article> {
     articles.map(|article| article.unwrap()).collect()
 }
 
+pub fn of_file(file_name: &'static str) -> Service {
+    let path = Path::new(file_name);
+    fs::remove_file(path);
+    let c: Connection = Connection::open(path).unwrap();
+
+    create(&c).unwrap();
+    insert(&c).unwrap();
+    Service { c: c }
+}
+
 impl Service {
     #[allow(dead_code)]
     pub fn select(&self) -> Result<Vec<Article>> {
@@ -68,6 +78,15 @@ impl Service {
         let o = v.first();
         Ok(Some(o.unwrap().clone()))
     }
+
+    pub fn new() -> Service {
+        of_file("sample.db")
+    }
+
+    #[allow(dead_code)]
+    pub fn of_file(file_name: &'static str) -> Service {
+        of_file(file_name)
+    }
 }
 
 fn create(c: &Connection) -> Result<()> {
@@ -85,14 +104,3 @@ fn insert(c: &Connection) -> Result<()> {
     Ok(())
 }
 
-
-#[allow(unused_must_use)]
-pub fn init() -> Service {
-    let path = Path::new("sample.db");
-    fs::remove_file(path);
-    let c: Connection = Connection::open(path).unwrap();
-
-    create(&c).unwrap();
-    insert(&c).unwrap();
-    Service { c: c }
-}
