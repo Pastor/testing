@@ -1,24 +1,27 @@
 package main
 
 import (
-	"testing"
-	"os"
-	"net/http/cookiejar"
-	"net/http"
 	"bytes"
-	"net/textproto"
 	"fmt"
 	"mime/multipart"
-	"github.com/stretchr/testify/assert"
+	"net/http"
+	"net/http/cookiejar"
+	"net/textproto"
+	"os"
 	"strconv"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var ctx = Context{}.build()
+var ctx = LoadConfigurationFromFile("config/v1.yml").Context
 
 func TestMain(m *testing.M) {
 	var server = start(ctx)
 	server.SetKeepAlivesEnabled(true)
-	go server.ListenAndServe()
+	go func() {
+		server.ListenAndServe()
+	}()
 	var ret = m.Run()
 	server.Close()
 	os.Exit(ret)
@@ -27,18 +30,18 @@ func TestMain(m *testing.M) {
 func TestMethods(t *testing.T) {
 	t.Run("extract", func(t *testing.T) {
 		t.Run("success", ExtractSuccess)
-		t.Run("method_not_allowed_PUT", ExtractMethodNotAllowedPut)
-		t.Run("method_not_allowed_GET", ExtractMethodNotAllowedGet)
-		t.Run("method_not_allowed_OPTION", ExtractMethodNotAllowedOption)
-		t.Run("method_not_allowed_DELETE", ExtractMethodNotAllowedDelete)
-		t.Run("illegal_content_type", ExtractIllegalContentType)
-		t.Run("empty_content", ExtractEmptyContent)
+		t.Run("405_PUT", ExtractMethodNotAllowedPut)
+		t.Run("405_GET", ExtractMethodNotAllowedGet)
+		t.Run("405_OPTION", ExtractMethodNotAllowedOption)
+		t.Run("405_DELETE", ExtractMethodNotAllowedDelete)
+		t.Run("BPE-002001", ExtractIllegalContentType)
+		t.Run("BPE-002003", ExtractEmptyContent)
 	})
 	t.Run("compare", func(t *testing.T) {
-		t.Run("method_not_allowed_PUT", CompareMethodNotAllowedPut)
-		t.Run("method_not_allowed_GET", CompareMethodNotAllowedGet)
-		t.Run("method_not_allowed_OPTION", CompareMethodNotAllowedOption)
-		t.Run("method_not_allowed_DELETE", CompareMethodNotAllowedDelete)
+		t.Run("405_PUT", CompareMethodNotAllowedPut)
+		t.Run("405_GET", CompareMethodNotAllowedGet)
+		t.Run("405_OPTION", CompareMethodNotAllowedOption)
+		t.Run("405_DELETE", CompareMethodNotAllowedDelete)
 	})
 }
 
@@ -65,7 +68,7 @@ func BuildRequest(method string, query string, contentType string, content []byt
 }
 
 func CreateRequest(t *testing.T, method string, path string, contentType string, content []byte, code int, responseContentType string) (*http.Response, error) {
-	query := "http://" + ctx.address + ":" + ctx.port + fmt.Sprintf("/%s/%s", ctx.toPath(), path)
+	query := "http://" + ctx.Address + ":" + ctx.Port + fmt.Sprintf("/%s/%s", ctx.toPath(), path)
 	cookieJar, _ := cookiejar.New(nil)
 	client := &http.Client{Jar: cookieJar, CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"testing"
 	"net/http"
+	"testing"
 )
 
 func CompareMethodNotAllowedPut(t *testing.T) {

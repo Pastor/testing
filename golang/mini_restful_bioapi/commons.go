@@ -1,11 +1,11 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"encoding/json"
-	"fmt"
 )
 
 const ContentTypeHeader = "Content-Type"

@@ -1,10 +1,11 @@
 package main
 
 import (
-	"testing"
 	"io/ioutil"
-	"github.com/stretchr/testify/assert"
 	"net/http"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func ExtractSuccess(t *testing.T) {
