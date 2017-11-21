@@ -1,20 +1,21 @@
 package main
 
 import (
-	//"log"
+	"fmt"
 	"testing"
-	//"time"
+	"time"
 
-	//"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/clientv3"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestClient(t *testing.T) {
-	//	client, err := clientv3.New(clientv3.Config{
-	//		Endpoints:   []string{"localhost:2379"},
-	//		DialTimeout: 5 * time.Second,
-	//	})
-	//	if err != nil {
-	//		log.Println(err)
-	//	}
-	//	defer client.Close()
+func TestController_Connect(t *testing.T) {
+	client, err := clientv3.New(clientv3.Config{
+		Endpoints:   []string{"localhost:2379"},
+		DialTimeout: 5 * time.Second,
+	})
+	assert.Nil(t, err, fmt.Sprintf("Ошибка подключения к etcd: %s", err.Error()))
+	if client != nil {
+		client.Close()
+	}
 }
