@@ -1,8 +1,8 @@
 package main
 
 type Exception struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Code    string `json:"error_code"`
+	Message string `json:"error_message"`
 }
 
 type ErrorType struct {
