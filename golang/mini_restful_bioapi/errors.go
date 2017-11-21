@@ -18,5 +18,5 @@ var (
 	CantExtractBiometricsError = ErrorType{
 		Exception: Exception{Code: "BPE-002004", Message: "Не удалось извлечь биометрический шаблон"}, HttpCode: 400}
 	InternalServiceError = ErrorType{
-		Exception: Exception{Code: "BPE-001001", Message: "BPE-001001"}, HttpCode: 500}
+		Exception: Exception{Code: "BPE-001001", Message: "Внутренняя ошибка биопроцессора"}, HttpCode: 500}
 )
