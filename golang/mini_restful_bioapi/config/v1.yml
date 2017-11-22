@@ -1,7 +1,10 @@
 schema: v1
 generation: v32
-cache:
-  address: 127.0.0.1:6379
+configurator:
+  addresses:
+  - 127.0.0.1:2379
+  put_key_timeout: 1
+  get_key_timeout: 1
 context:
   version: 1.0.0
   vendor: grcc

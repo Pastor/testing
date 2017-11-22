@@ -6,18 +6,17 @@ import (
 
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
+	"fmt"
 )
 
-const VENDOR = "grcc"
-const VERSION = "1.0.0"
-const CONFIGURATION = "config/v1.yml"
-
-func TestConfiguration_LoadFromFile(t *testing.T) {
+func ConfigurationLoadFromFile(t *testing.T) {
 	var created = Configuration{
 		Schema:     "v1",
 		Generation: "v32",
-		Cache: CacheContext{
-			Address: "127.0.0.1:6379",
+		Configurator: ConfiguratorContext{
+			Addresses:     []string{"127.0.0.1:2379"},
+			PutKeyTimeout: 1,
+			GetKeyTimeout: 1,
 		},
 		Context: Context{
 			Address:       "127.0.0.1",
@@ -36,12 +35,14 @@ func TestConfiguration_LoadFromFile(t *testing.T) {
 	assert.Equal(t, loaded, created, "Не правильная загрузка контекста")
 }
 
-func TestConfiguration_StoreConfiguration(t *testing.T) {
+func ConfigurationStoreConfiguration(t *testing.T) {
 	var created = Configuration{
 		Schema:     "v1",
 		Generation: "v32",
-		Cache: CacheContext{
-			Address: "127.0.0.1:6379",
+		Configurator: ConfiguratorContext{
+			Addresses:     []string{"127.0.0.1:2379"},
+			PutKeyTimeout: 5,
+			GetKeyTimeout: 5,
 		},
 		Context: Context{
 			Address:       "127.0.0.1",
@@ -55,8 +56,11 @@ func TestConfiguration_StoreConfiguration(t *testing.T) {
 			TemplateRange: RangeInt{Min: 16, Max: 260},
 		}}
 	var content = StoreConfiguration(created)
-	assert.Equal(t, `cache:
-  address: 127.0.0.1:6379
+	assert.Equal(t, `configurator:
+  addresses:
+  - 127.0.0.1:2379
+  get_key_timeout: 5
+  put_key_timeout: 5
 context:
   address: 127.0.0.1
   base_path: unknown
@@ -76,34 +80,28 @@ schema: v1
 `, content)
 }
 
-func TestCache_Connect(t *testing.T) {
-	var configuration = LoadConfigurationFromFile(CONFIGURATION)
-	var cache = Cache{}
-	err := cache.Connect(configuration.Cache)
-	assert.Nil(t, err, "Ошибка подключения к серверу кэш")
-	defer cache.Close()
+func ConfiguratorConnect(t *testing.T) {
+	configurator, err := NewConfigurator(configuration)
+	assert.Nil(t, err, fmt.Sprintf("Ошибка создание конфигуратора %s", TranslateError(err)))
+	defer configurator.Close()
 }
 
-func TestCache_Put(t *testing.T) {
-	var configuration = LoadConfigurationFromFile(CONFIGURATION)
-	var cache = Cache{}
-	err := cache.Connect(configuration.Cache)
-	assert.Nil(t, err, "Ошибка подключения к серверу кэш")
-	defer cache.Close()
+func ConfiguratorPut(t *testing.T) {
+	configurator, err := NewConfigurator(configuration)
+	assert.Nil(t, err, fmt.Sprintf("Ошибка создание конфигуратора %s", TranslateError(err)))
+	defer configurator.Close()
 	var key = uuid.NewV4()
-	err = cache.Put(key.String(), "VALUE")
+	err = configurator.Put(key.String(), "VALUE")
 	assert.Nil(t, err, "Ошибка помещения значения")
 }
 
-func TestCache_Get(t *testing.T) {
-	var configuration = LoadConfigurationFromFile(CONFIGURATION)
-	var cache = Cache{}
-	err := cache.Connect(configuration.Cache)
-	assert.Nil(t, err, "Ошибка подключения к серверу кэш")
-	defer cache.Close()
+func ConfiguratorGet(t *testing.T) {
+	configurator, err := NewConfigurator(configuration)
+	assert.Nil(t, err, fmt.Sprintf("Ошибка создание конфигуратора %s", TranslateError(err)))
+	defer configurator.Close()
 	var key = uuid.NewV4()
-	err = cache.Put(key.String(), "VALUE")
+	err = configurator.Put(key.String(), "VALUE")
 	assert.Nil(t, err, "Ошибка помещения значения")
-	_, err = cache.Get(key.String())
+	_, err = configurator.Get(key.String())
 	assert.Nil(t, err, "Ошибка получения значения")
 }

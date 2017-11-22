@@ -14,7 +14,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var ctx = LoadConfigurationFromFile("config/v1.yml").Context
+const VENDOR = "grcc"
+const VERSION = "1.0.0"
+const CONFIGURATION = "config/v1.yml"
+
+var configuration = LoadConfigurationFromFile(CONFIGURATION)
+var ctx = configuration.Context
+
+func TranslateError(err error) string {
+	if err == nil {
+		return "unknown"
+	}
+	return err.Error()
+}
 
 func TestMain(m *testing.M) {
 	var server = start(ctx)
@@ -27,21 +39,32 @@ func TestMain(m *testing.M) {
 	os.Exit(ret)
 }
 
-func TestMethods(t *testing.T) {
-	t.Run("extract", func(t *testing.T) {
-		t.Run("success", ExtractSuccess)
-		t.Run("405_PUT", ExtractMethodNotAllowedPut)
-		t.Run("405_GET", ExtractMethodNotAllowedGet)
-		t.Run("405_OPTION", ExtractMethodNotAllowedOption)
-		t.Run("405_DELETE", ExtractMethodNotAllowedDelete)
-		t.Run("BPE-002001", ExtractIllegalContentType)
-		t.Run("BPE-002003", ExtractEmptyContent)
+func TestEngine(t *testing.T) {
+	t.Run("Web", func(t *testing.T) {
+		t.Run("Extract", func(t *testing.T) {
+			t.Run("Success", ExtractSuccess)
+			t.Run("405_PUT", ExtractMethodNotAllowedPut)
+			t.Run("405_GET", ExtractMethodNotAllowedGet)
+			t.Run("405_OPTION", ExtractMethodNotAllowedOption)
+			t.Run("405_DELETE", ExtractMethodNotAllowedDelete)
+			t.Run("BPE-002001", ExtractIllegalContentType)
+			t.Run("BPE-002003", ExtractEmptyContent)
+		})
+		t.Run("Compare", func(t *testing.T) {
+			t.Run("405_PUT", CompareMethodNotAllowedPut)
+			t.Run("405_GET", CompareMethodNotAllowedGet)
+			t.Run("405_OPTION", CompareMethodNotAllowedOption)
+			t.Run("405_DELETE", CompareMethodNotAllowedDelete)
+		})
 	})
-	t.Run("compare", func(t *testing.T) {
-		t.Run("405_PUT", CompareMethodNotAllowedPut)
-		t.Run("405_GET", CompareMethodNotAllowedGet)
-		t.Run("405_OPTION", CompareMethodNotAllowedOption)
-		t.Run("405_DELETE", CompareMethodNotAllowedDelete)
+	t.Run("Configuration", func(t *testing.T) {
+		t.Run("LoadFromFile", ConfigurationLoadFromFile)
+		t.Run("Store", ConfigurationStoreConfiguration)
+	})
+	t.Run("Configurator", func(t *testing.T) {
+		t.Run("Connect", ConfiguratorConnect)
+		t.Run("Put", ConfiguratorPut)
+		t.Run("Get", ConfiguratorGet)
 	})
 }
 
