@@ -74,7 +74,7 @@ extern void exit(int);
 
 void die(char *err);
 
-int game_vm8080();
+int load_game_vm8080();
 
 void reset_vm8080();
 

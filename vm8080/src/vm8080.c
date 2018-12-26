@@ -1122,7 +1122,7 @@ void reset_vm8080() {
     }
 }
 
-int game_vm8080() {
+int load_game_vm8080() {
     FILE *rom;
     char *bank_name[] = {"invaders.h", "invaders.g", "invaders.f", "invaders.e"};
     int c;

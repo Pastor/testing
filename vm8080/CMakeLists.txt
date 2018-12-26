@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.9)
 project(vm8080)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/.build_unk")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/.build_w64")
 
 find_package(SDL2 REQUIRED)
 

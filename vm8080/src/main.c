@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
     screen = SDL_CreateRGBSurface(SDL_SWSURFACE, 256, 224, 32, r_mask, g_mask, b_mask, a_mask);
     texture = SDL_CreateTexture(render, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 256, 224);
 
-    if (!game_vm8080()) {
+    if (!load_game_vm8080()) {
         printf("Error while initializing the processor\n");
         exit(0);
     }
