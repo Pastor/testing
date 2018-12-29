@@ -1016,10 +1016,11 @@ u8 read_byte(u16 offset) {
             continue;
         if (!WHIT_IN(offset, cpu.ram[c].start, cpu.ram[c].start + cpu.ram[c].size))
             continue;
+        u8 value = cpu.ram[c].ptr[offset - cpu.ram[c].start];
 #ifdef DEBUG
-        printf("Read @ %#x\n", value, offset);
+        printf("Read @ %#x from %#x\n", value, offset);
 #endif
-        return cpu.ram[c].ptr[offset - cpu.ram[c].start];
+        return value;
     }
     die("Read out of bounds!");
     return 0xFF;
@@ -1122,6 +1123,38 @@ void reset_vm8080() {
     }
 }
 
+int load_program_vm8080(char *filename) {
+    FILE *rom;
+    int c;
+    u8 *bank_ptr = NULL;
+
+    printf("Resetting the 8080...\n");
+    reset_vm8080();
+    for (c = 0; c < 4; c++) {
+        if (cpu.ram[c].flag == FLAG_ROM) {
+            printf("ROM @ %#x (%#x) %p\n", cpu.ram[c].start, cpu.ram[c].size, (void *) cpu.ram[c].ptr);
+            bank_ptr = cpu.ram[c].ptr;
+            break;
+        }
+    }
+    if (!bank_ptr)
+        die("No rom bank defined");
+    rom = fopen(filename, "rb");
+    if (!rom) {
+        return 0;
+    }
+    for (c = 0; c < 4; c++) {
+        int offset = c == 0 ? 0x100 : 0;
+        size_t read = fread(&bank_ptr[0x0800 * c] + offset, 1, 0x0800, rom);
+        if (read < 0x0800)
+            break;
+    }
+    fclose(rom);
+    printf("Loaded the %d rom banks...\n", c + 1);
+    fflush(stdout);
+    return 1;
+}
+
 int load_game_vm8080() {
     FILE *rom;
     char *bank_name[] = {"invaders.h", "invaders.g", "invaders.f", "invaders.e"};
@@ -1152,4 +1185,8 @@ int load_game_vm8080() {
     printf("Loaded the 4 rom banks...\n");
     fflush(stdout);
     return 1;
+}
+
+void jump_vm8080(u16 address) {
+    cpu.PC = (u16) (address & 0xffff);
 }

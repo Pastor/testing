@@ -88,7 +88,7 @@ static void update_display() {
     SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
     SDL_UnlockSurface(screen);
     SDL_RenderClear(render);
-    SDL_RenderCopyEx( render, texture, NULL, NULL, -90, NULL, SDL_FLIP_NONE );
+    SDL_RenderCopyEx(render, texture, NULL, NULL, -90, NULL, SDL_FLIP_NONE);
     SDL_RenderPresent(render);
 }
 
@@ -148,22 +148,36 @@ int main(int argc, char *argv[]) {
     screen = SDL_CreateRGBSurface(SDL_SWSURFACE, 256, 224, 32, r_mask, g_mask, b_mask, a_mask);
     texture = SDL_CreateTexture(render, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 256, 224);
 
-    if (!load_game_vm8080()) {
-        printf("Error while initializing the processor\n");
-        exit(0);
-    }
-
     cpu.port_in = port_in;
     cpu.port_out = port_out;
-
-    while (!cpu.halt) {
-        run_vm8080(28527);
-        cause_int(8);
-        update_display();
-        run_vm8080(4839);
-        cause_int(16);
-        update_input();
-        SDL_Delay(15);
+    if (argc <= 1) {
+        if (!load_game_vm8080()) {
+            printf("Error while initializing the processor\n");
+            exit(0);
+        }
+        while (!cpu.halt) {
+            run_vm8080(28527);
+            cause_int(8);
+            update_display();
+            run_vm8080(4839);
+            cause_int(16);
+            update_input();
+            SDL_Delay(15);
+        }
+    } else {
+        if (!load_program_vm8080(argv[1])) {
+            printf("Error while initializing the processor\n");
+            exit(0);
+        }
+        cpu.ram[0].ptr[5 - cpu.ram[0].start] = 0xC9;
+//        write_byte(0xC9, 5);
+        jump_vm8080(0x100);
+        while (!cpu.halt) {
+            run_vm8080(100);
+            update_display();
+            update_input();
+            SDL_Delay(15);
+        }
     }
     SDL_DestroyRenderer(render);
     SDL_DestroyTexture(texture);
@@ -174,7 +188,12 @@ int main(int argc, char *argv[]) {
 
 #include <windows.h>
 
+static char *argv[] = {
+        "program", NULL, NULL
+};
+
 INT WINAPI
 WinMain(HINSTANCE h_instance, HINSTANCE h_prev_instance, LPSTR lp_str, int n_show) {
-    return main(0, NULL);
+    argv[1] = lp_str;
+    return main(lp_str != NULL ? 2 : 1, argv);
 }

@@ -76,6 +76,10 @@ void die(char *err);
 
 int load_game_vm8080();
 
+int load_program_vm8080(char *filename);
+
+void jump_vm8080(u16 address);
+
 void reset_vm8080();
 
 int run_vm8080(int cycles);
