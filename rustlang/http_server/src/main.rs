@@ -115,6 +115,14 @@ fn not_found(req: &Request) -> JsonValue {
     })
 }
 
+/// # Examples
+///
+/// ```rust
+/// use rusqlite::{Connection, Error};
+///
+/// let conn = Connection::open_in_memory().expect("in memory db");
+/// init_database(&conn);
+/// ```
 fn init_database(conn: &Connection) {
     conn.execute("CREATE TABLE entries (
                   id              INTEGER PRIMARY KEY,
