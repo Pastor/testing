@@ -23,7 +23,11 @@ libs:
   # libs necessary for the current app
   - origin: https://github.com/mongoose-os-libs/atca
   - origin: https://github.com/mongoose-os-libs/demo-bundle
-
+  - origin: https://github.com/mongoose-os-libs/ota-shadow
+  - origin: https://github.com/mongoose-os-libs/core
+  - origin: https://github.com/mongoose-os-libs/dash
+  - origin: https://github.com/mongoose-os-libs/dns-sd
+  - origin: https://github.com/mongoose-os-libs/provision
 
 tags:
   - c
@@ -32,8 +36,8 @@ tags:
 config_schema:
   - ["device.id", "Pastor_Device00"]
   - ["mqtt.server", "iot.eclipse.org:1883"]
-  - ["sys.atca.enable", true]
-  - ["i2c.enable", true]
+  - ["sys.atca.enable", false]
+  - ["i2c.enable", false]
   - ["i2c.sda_gpio", 4]
   - ["i2c.scl_gpio", 5]
   - ["wifi.sta.enable", true]

@@ -5,6 +5,7 @@
 #include "mgos_wifi.h"
 #endif
 #include "mgos_atca.h"
+#include "mgos_shadow.h"
 
 static int led_pin;
 
@@ -77,16 +78,12 @@ static void wifi_cb(int ev, void *evd, void *arg) {
 #endif /* MGOS_HAVE_WIFI */
 
 static void button_cb(int pin, void *arg) {
-  char topic[100];
-  snprintf(topic, sizeof(topic), "/devices/%s/events",
-           mgos_sys_config_get_device_id());
-  bool res = mgos_mqtt_pubf(topic, 0, false /* retain */,
-                            "{total_ram: %lu, free_ram: %lu}",
+  mgos_shadow_updatef(0, "{total_ram: %lu, free_ram: %lu, button: 1}",
                             (unsigned long) mgos_get_heap_size(),
                             (unsigned long) mgos_get_free_heap_size());
   char buf[8];
   LOG(LL_INFO,
-      ("Pin: %s, published: %s", mgos_gpio_str(pin, buf), res ? "yes" : "no"));
+      ("Pin: %s", mgos_gpio_str(pin, buf)));
   (void) arg;
 }
 
