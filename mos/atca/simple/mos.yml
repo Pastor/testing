@@ -36,8 +36,8 @@ tags:
 config_schema:
   - ["device.id", "Pastor_Device00"]
   - ["mqtt.server", "iot.eclipse.org:1883"]
-  - ["sys.atca.enable", false]
-  - ["i2c.enable", false]
+  - ["sys.atca.enable", true]
+  - ["i2c.enable", true]
   - ["i2c.sda_gpio", 4]
   - ["i2c.scl_gpio", 5]
   - ["wifi.sta.enable", true]
@@ -45,6 +45,8 @@ config_schema:
   - ["wifi.sta.pass", "PY5P75RY"]
   - ["board.led1.active_high", true]
   - ["board.led1.pin", 2]
+  - ["board.btn1.pull_up", false]
+  - ["board.btn1.pin", 16]
 
 #build_vars:
 #  MGOS_ENABLE_HEAP_LOG: 1
