@@ -1,0 +1,36 @@
+cmake_minimum_required(VERSION 3.2.1)
+project(jm)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(BUILD_BINARY_SERVICE ON)
+set(BUILD_LIBRARY_TESTS ON)
+set(DISABLE_DEBUG_OUTPUT ON)
+
+option(ENABLE_OPENSSL "Build http servers with OpenSSL" OFF)
+
+add_definitions(-DMG_ENABLE_HTTP_STREAMING_MULTIPART)
+#add_definitions(-DMG_ENABLE_SSL)
+add_definitions(-DMG_ENABLE_HTTP)
+add_definitions(-DMG_ENABLE_THREADS=1)
+add_definitions(-DMAKE_LIB)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_BINARY_DIR})
+include_directories(${OPENSSL_INCLUDE_DIR})
+include_directories(.)
+
+if (WIN32)
+    set(SYSTEM_LIBRARIES ws2_32)
+endif ()
+
+if (ENABLE_OPENSSL)
+    set(OPTIONAL_LIBRARIES ${OPENSSL_LIBRARIES})
+endif ()
+
+add_executable(${PROJECT_NAME}_server http_server.c mongoose.c)
+add_library(${PROJECT_NAME}_engine STATIC v7.c)
+add_library(${PROJECT_NAME}_l STATIC lua-amalgamation.c)
+target_link_libraries(${PROJECT_NAME}_server ${PROJECT_NAME}_engine ${SYSTEM_LIBRARIES} ${OPTIONAL_LIBRARIES})
+file(COPY web_root DESTINATION ${CMAKE_BINARY_DIR}/)
