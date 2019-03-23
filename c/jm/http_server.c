@@ -4,19 +4,34 @@
 #include <stdlib.h>
 #include "v7.h"
 #include "mongoose.h"
+#include "engine.h"
 
 static sig_atomic_t s_stop_signal = false;
 static struct mg_serve_http_opts s_http_server_opts;
-static struct v7 *v7;
+static  struct EngineContext *ctx;
 
-static void handle_upload(struct mg_connection *nc, int ev, void *p) {
+const char program_text[] =
+        "#include <tcclib.h>\n"
+        "extern double sum(double a, double b);  \n"
+        "#ifdef _WIN32                           \n" /* dynamically linked data needs 'dllimport' */
+        " __attribute__((dllimport))             \n"
+        "#endif                                  \n"
+        "extern const char hello_text[];         \n"
+        "extern void print(const char *text);    \n"
+        "int main(int argc, char **argv) {       \n"
+        "    double r = sum(2, 3);               \n"
+        "    printf(\"%s: %f\n\", hello_text, r);\n"
+        "    return 3;                           \n"
+        "}                                       \n";
+
+static void handle_execute(struct mg_connection *nc, int ev, void *p) {
     switch (ev) {
         case MG_EV_HTTP_REQUEST: {
             int ret = -1;
             struct http_message *hm = (struct http_message *) p;
 
             nc->flags |= MG_F_SEND_AND_CLOSE;
-            if (mg_vcmp(&hm->uri, "/execute") == 0) {
+            if (mg_vcmp(&hm->uri, "/execute") == 0 && mg_vcmp(&hm->method, "POST")) {
                 //Good
             } else {
                 mg_printf(nc, "HTTP/1.1 200 OK\r\n"
@@ -44,20 +59,6 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
         mg_serve_http(nc, ev_data, s_http_server_opts);
     }
 }
-
-static double sum(double a, double b) {
-    return a + b;
-}
-
-static enum v7_err js_sum(struct v7 *v7, v7_val_t *res) {
-    double arg0 = v7_get_double(v7, v7_arg(v7, 0));
-    double arg1 = v7_get_double(v7, v7_arg(v7, 1));
-    double result = sum(arg0, arg1);
-
-    *res = v7_mk_number(v7, result);
-    return V7_OK;
-}
-
 
 int main(int argc, char **argv) {
     int i;
@@ -101,24 +102,22 @@ int main(int argc, char **argv) {
     }
     s_http_server_opts.document_root = ".";
     s_http_server_opts.document_root = "web_root";
-    mg_register_http_endpoint(c, "/execute", handle_upload);
+    mg_register_http_endpoint(c, "/execute", handle_execute);
     mg_set_protocol_http_websocket(c);
     s_stop_signal = false;
 
-    {
-        v7_val_t result;
-        enum v7_err rcode = V7_OK;
+    ctx = engine_context();
+//    {
+//        int i = 0;
+//
+//        for (i = 0; i < 100000; ++i) {
+//            engine_execute(ctx, program_text, strlen(program_text));
+//        }
+//    }
 
-        v7 = v7_create();
-        v7_set_method(v7, v7_get_global(v7), "sum", &js_sum);
-        rcode = v7_exec(v7, "print('sum = ' + sum(1.2, 3.4))", &result);
-        if (rcode != V7_OK) {
-            v7_print_error(stderr, v7, "Evaluation error", result);
-        }
-    }
     while (s_stop_signal == false) {
         mg_mgr_poll(&mgr, 100);
     }
-    v7_destroy(v7);
+
     return EXIT_SUCCESS;
 }

@@ -1,54 +1,45 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>AJAX Upload Example</title>
-  <script src="//code.jquery.com/jquery-1.9.1.js"></script>
-  <script type="text/javascript">
-    function updateProgress(evt) {
-      if (evt.lengthComputable) {
-        document.getElementById("output").textContent =
-              "Uploaded " + evt.loaded + " of " + evt.total + " bytes";
-      }
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Editor</title>
+  <style type="text/css" media="screen">
+    body {
+      overflow: hidden;
     }
-    function uploadFile() {
-      var file_data = new FormData(document.getElementById('filename'));
-      $.ajax({
-        url: "/upload",
-        type: "POST",
-        data: file_data,
-        processData: false,
-        contentType: false,
-        cache: false,
-        xhr: function() {
-          myXhr = $.ajaxSettings.xhr();
-          if(myXhr.upload){
-            myXhr.upload.addEventListener('progress',updateProgress, false); // for handling the progress of the upload
-          }
-          return myXhr;
-        },
-      }).done(function(data) {
-          document.getElementById("output").textContent = "Result: " + data;
-      });
-      return false;
+    #editor {
+      margin: 0;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
     }
-  </script>
+  </style>
 </head>
-
 <body>
-  <h1>Upload file using standard form upload</h1>
 
-  <form method="POST" action="/upload" enctype="multipart/form-data">
-    <label>Select a file:</label><br>
-    <input type="file" name="file" />
-    <input type="submit" value="Upload" />
-  </form>
+<pre id="editor">
+    #include &lt;tcclib.h&gt;
+    extern double sum(double a, double b);
+    #ifdef _WIN32                           /* dynamically linked data needs 'dllimport' */
+     __attribute__((dllimport))
+    #endif
+    extern const char hello_text[];
+    int main(int argc, char **argv) {
+        double r = sum(2, 3);
+        printf("%s: %f\n", hello_text, r);
+        return 3;
+    }
+}</pre>
 
-  <h1>Upload file using Ajax - that also gives progress report</h1>
-  <form method="post" id="filename" name="filename" onsubmit="return uploadFile();">
-    <label>Select a file:</label><br>
-    <input type="file" id="file" name="file" required />
-    <input type="submit" value="Upload" />
-  </form>
-  <br><br><div id="output"></div>
+<script src="editor/ace.js" type="text/javascript" charset="utf-8"></script>
+<script>
+  var editor = ace.edit("editor");
+  editor.setTheme("ace/theme/xcode");
+  editor.session.setMode("ace/mode/c_cpp");
+</script>
+
 </body>
 </html>

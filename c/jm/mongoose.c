@@ -1091,15 +1091,15 @@ static void byteReverse(unsigned char *buf, unsigned longs) {
  * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
  * initialization constants.
  */
-//void cs_md5_init(cs_md5_ctx *ctx) {
-//  ctx->buf[0] = 0x67452301;
-//  ctx->buf[1] = 0xefcdab89;
-//  ctx->buf[2] = 0x98badcfe;
-//  ctx->buf[3] = 0x10325476;
-//
-//  ctx->bits[0] = 0;
-//  ctx->bits[1] = 0;
-//}
+void cs_md5_init(cs_md5_ctx *ctx) {
+  ctx->buf[0] = 0x67452301;
+  ctx->buf[1] = 0xefcdab89;
+  ctx->buf[2] = 0x98badcfe;
+  ctx->buf[3] = 0x10325476;
+
+  ctx->bits[0] = 0;
+  ctx->bits[1] = 0;
+}
 
 static void cs_md5_transform(uint32_t buf[4], uint32_t const in[16]) {
   register uint32_t a, b, c, d;
@@ -1183,70 +1183,70 @@ static void cs_md5_transform(uint32_t buf[4], uint32_t const in[16]) {
   buf[3] += d;
 }
 
-//void cs_md5_update(cs_md5_ctx *ctx, const unsigned char *buf, size_t len) {
-//  uint32_t t;
-//
-//  t = ctx->bits[0];
-//  if ((ctx->bits[0] = t + ((uint32_t) len << 3)) < t) ctx->bits[1]++;
-//  ctx->bits[1] += (uint32_t) len >> 29;
-//
-//  t = (t >> 3) & 0x3f;
-//
-//  if (t) {
-//    unsigned char *p = (unsigned char *) ctx->in + t;
-//
-//    t = 64 - t;
-//    if (len < t) {
-//      memcpy(p, buf, len);
-//      return;
-//    }
-//    memcpy(p, buf, t);
-//    byteReverse(ctx->in, 16);
-//    cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
-//    buf += t;
-//    len -= t;
-//  }
-//
-//  while (len >= 64) {
-//    memcpy(ctx->in, buf, 64);
-//    byteReverse(ctx->in, 16);
-//    cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
-//    buf += 64;
-//    len -= 64;
-//  }
-//
-//  memcpy(ctx->in, buf, len);
-//}
-//
-//void cs_md5_final(unsigned char digest[16], cs_md5_ctx *ctx) {
-//  unsigned count;
-//  unsigned char *p;
-//  uint32_t *a;
-//
-//  count = (ctx->bits[0] >> 3) & 0x3F;
-//
-//  p = ctx->in + count;
-//  *p++ = 0x80;
-//  count = 64 - 1 - count;
-//  if (count < 8) {
-//    memset(p, 0, count);
-//    byteReverse(ctx->in, 16);
-//    cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
-//    memset(ctx->in, 0, 56);
-//  } else {
-//    memset(p, 0, count - 8);
-//  }
-//  byteReverse(ctx->in, 14);
-//
-//  a = (uint32_t *) ctx->in;
-//  a[14] = ctx->bits[0];
-//  a[15] = ctx->bits[1];
-//
-//  cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
-//  byteReverse((unsigned char *) ctx->buf, 4);
-//  memcpy(digest, ctx->buf, 16);
-//  memset((char *) ctx, 0, sizeof(*ctx));
-//}
+void cs_md5_update(cs_md5_ctx *ctx, const unsigned char *buf, size_t len) {
+  uint32_t t;
+
+  t = ctx->bits[0];
+  if ((ctx->bits[0] = t + ((uint32_t) len << 3)) < t) ctx->bits[1]++;
+  ctx->bits[1] += (uint32_t) len >> 29;
+
+  t = (t >> 3) & 0x3f;
+
+  if (t) {
+    unsigned char *p = (unsigned char *) ctx->in + t;
+
+    t = 64 - t;
+    if (len < t) {
+      memcpy(p, buf, len);
+      return;
+    }
+    memcpy(p, buf, t);
+    byteReverse(ctx->in, 16);
+    cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
+    buf += t;
+    len -= t;
+  }
+
+  while (len >= 64) {
+    memcpy(ctx->in, buf, 64);
+    byteReverse(ctx->in, 16);
+    cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
+    buf += 64;
+    len -= 64;
+  }
+
+  memcpy(ctx->in, buf, len);
+}
+
+void cs_md5_final(unsigned char digest[16], cs_md5_ctx *ctx) {
+  unsigned count;
+  unsigned char *p;
+  uint32_t *a;
+
+  count = (ctx->bits[0] >> 3) & 0x3F;
+
+  p = ctx->in + count;
+  *p++ = 0x80;
+  count = 64 - 1 - count;
+  if (count < 8) {
+    memset(p, 0, count);
+    byteReverse(ctx->in, 16);
+    cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
+    memset(ctx->in, 0, 56);
+  } else {
+    memset(p, 0, count - 8);
+  }
+  byteReverse(ctx->in, 14);
+
+  a = (uint32_t *) ctx->in;
+  a[14] = ctx->bits[0];
+  a[15] = ctx->bits[1];
+
+  cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
+  byteReverse((unsigned char *) ctx->buf, 4);
+  memcpy(digest, ctx->buf, 16);
+  memset((char *) ctx, 0, sizeof(*ctx));
+}
 
 #endif /* CS_DISABLE_MD5 */
 #endif /* EXCLUDE_COMMON */
