@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <malloc.h>
+#include <memory.h>
 #include <libtcc.h>
 #include "engine.h"
 
@@ -66,30 +67,34 @@ bool engine_execute(struct EngineContext *ctx, const char *text, size_t size) {
     int retcode;
 
     state = tcc_new();
-    if (state == 0) {
+    if (state == 0 || text == 0) {
         return 0;
     }
+    char *program_text = calloc(1, size + 1);
+    memcpy(program_text, text, size);
+
     tcc_add_include_path(state, "F:/GitHub/testing/c/jm/3rdparty/tinycc/sysroot");
     tcc_add_library_path(state, "F:/GitHub/testing/c/jm/3rdparty/tinycc/win");
     tcc_set_output_type(state, TCC_OUTPUT_MEMORY);
-    if (tcc_compile_string(state, text) == -1) {
-        fprintf(stderr, "");
+    if (tcc_compile_string(state, program_text) == -1) {
+        fprintf(stderr, "Error compile\n");
         tcc_delete(state);
+        free(program_text);
         return false;
     }
-
+    free(program_text);
     tcc_add_symbol(state, "sum", sum);
     tcc_add_symbol(state, "print", print);
     tcc_add_symbol(state, "printf", d_printf);
     tcc_add_symbol(state, "hello_text", "Hello world!");
     if (tcc_relocate(state, TCC_RELOCATE_AUTO) < 0) {
-        fprintf(stderr, "");
+        fprintf(stderr, "Error relocate");
         tcc_delete(state);
         return false;
     }
     main = tcc_get_symbol(state, "main");
     if (main == 0) {
-        fprintf(stderr, "");
+        fprintf(stderr, "Error get main function\n");
         tcc_delete(state);
         return false;
     }

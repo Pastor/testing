@@ -31,22 +31,23 @@ static void handle_execute(struct mg_connection *nc, int ev, void *p) {
             struct http_message *hm = (struct http_message *) p;
 
             nc->flags |= MG_F_SEND_AND_CLOSE;
-            if (mg_vcmp(&hm->uri, "/execute") == 0 && mg_vcmp(&hm->method, "POST")) {
-                //Good
+            nc->user_data = 0;
+            if (mg_vcmp(&hm->uri, "/execute") == 0 && mg_vcmp(&hm->method, "POST") == 0) {
+                engine_execute(ctx, hm->body.p, hm->body.len);
+                mg_printf(nc, "HTTP/1.1 200 OK\r\n"
+                              "Content-Type: application/json\r\n"
+                              "Access-Control-Allow-Origin: *\r\n"
+                              "Connection: close\r\n\r\n"
+                              "{\"code\": 0, \"message\": \"Execute success\"}");
+                break;
             } else {
                 mg_printf(nc, "HTTP/1.1 200 OK\r\n"
                               "Content-Type: application/json\r\n"
                               "Access-Control-Allow-Origin: *\r\n"
-                              "Connection: close\r\n\r\n");
+                              "Connection: close\r\n\r\n"
+                              "{\"code\": 1, \"message\": \"Bad request\"}");
                 break;
             }
-
-            mg_printf(nc, "HTTP/1.1 200 OK\r\n"
-                          "Content-Type: application/json\r\n"
-                          "Access-Control-Allow-Origin: *\r\n"
-                          "Connection: close\r\n\r\n"
-                          "{\"code\": %d, \"message\": \"%s\"}", ret, "Good");
-            nc->user_data = 0;
             break;
         }
         default:
