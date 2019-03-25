@@ -22,18 +22,22 @@
 <body>
 
 <pre id="editor">
-    #include &lt;tcclib.h&gt;
-    extern double sum(double a, double b);
-    #ifdef _WIN32                           /* dynamically linked data needs 'dllimport' */
-     __attribute__((dllimport))
-    #endif
-    extern const char hello_text[];
-    int main(int argc, char **argv) {
-        double r = sum(2, 3);
-        printf("%s: %f\n", hello_text, r);
-        return 3;
+#include &lt;tcclib.h&gt;
+#ifdef _WIN32                           /* dynamically linked data needs 'dllimport' */
+ __attribute__((dllimport))
+#endif
+extern const char hello_text[];
+extern void usleep(long ms);
+int main(int argc, char **argv) {
+    int i;
+
+    for (i = 0; i < 100; ++i ) {
+        printf("%s: %d\n", hello_text, i);
+        usleep(100);
     }
-}</pre>
+    return 3;
+}
+</pre>
 <button onclick="send()">Send</button>
 
 <script src="editor/ace.js" type="text/javascript" charset="utf-8"></script>
@@ -47,15 +51,36 @@
 
     function send() {
         const xhr = new XMLHttpRequest();
+        let last_index = 0;
         xhr.open("POST", "/execute", true);
         xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-        xhr.send(editor.getValue());
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4) {
-                console.log(xhr.responseText);
-            }
-            console.log(xhr.responseText);
+
+        function receive_chunk() {
+            const curr_index = xhr.responseText.length;
+            if (last_index === curr_index)
+                return;
+            const chunk = xhr.responseText.substring(last_index, curr_index);
+            last_index = curr_index;
+            console.debug("PROGRESS:", chunk);
+        }
+
+        xhr.onprogress = function (event) {
+            receive_chunk();
         };
+        // xhr.onreadystatechange = function () {
+            // if (xhr.readyState === 4) {
+            //     console.debug(xhr.responseText);
+            // }
+            // console.debug(xhr.responseText);
+        // };
+        xhr.send(editor.getValue());
+        //
+        // const interval = setInterval(receive_chunk, 5000);
+        // setTimeout(function () {
+        //     clearInterval(interval);
+        //     receive_chunk();
+        //     xhr.abort();
+        // }, 25000);
     }
 </script>
 

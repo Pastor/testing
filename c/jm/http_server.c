@@ -10,19 +10,30 @@ static sig_atomic_t s_stop_signal = false;
 static struct mg_serve_http_opts s_http_server_opts;
 static  struct EngineContext *ctx;
 
-const char program_text[] =
-        "#include <tcclib.h>\n"
-        "extern double sum(double a, double b);  \n"
-        "#ifdef _WIN32                           \n" /* dynamically linked data needs 'dllimport' */
-        " __attribute__((dllimport))             \n"
-        "#endif                                  \n"
-        "extern const char hello_text[];         \n"
-        "extern void print(const char *text);    \n"
-        "int main(int argc, char **argv) {       \n"
-        "    double r = sum(2, 3);               \n"
-        "    printf(\"%s: %f\n\", hello_text, r);\n"
-        "    return 3;                           \n"
-        "}                                       \n";
+static char *cwd() {
+    static char current_dir[MAX_PATH * 2];
+    unsigned long current_dir_size = 0;
+
+    if (current_dir[0] != 0)
+        return current_dir;
+
+#if defined(WIN32)
+    current_dir_size = GetCurrentDirectoryA(sizeof(current_dir), current_dir);
+    current_dir[current_dir_size] = 0;
+#else
+    getcwd(current_dir, MAX_PATH);
+#endif
+    return current_dir;
+}
+
+static char *cwd_append(const char *path) {
+    char *p = cwd();
+    char *n = calloc(1, strlen(p) + strlen(p) + 2);
+    strcpy(n, p);
+    strcat(n, "/");
+    strcat(n, path);
+    return n;
+}
 
 static void handle_execute(struct mg_connection *nc, int ev, void *p) {
     switch (ev) {
@@ -30,24 +41,23 @@ static void handle_execute(struct mg_connection *nc, int ev, void *p) {
             int ret = -1;
             struct http_message *hm = (struct http_message *) p;
 
-            nc->flags |= MG_F_SEND_AND_CLOSE;
-            nc->user_data = 0;
+
             if (mg_vcmp(&hm->uri, "/execute") == 0 && mg_vcmp(&hm->method, "POST") == 0) {
-                engine_execute(ctx, hm->body.p, hm->body.len);
                 mg_printf(nc, "HTTP/1.1 200 OK\r\n"
-                              "Content-Type: application/json\r\n"
+                              "Transfer-Encoding: chunked\r\n"
                               "Access-Control-Allow-Origin: *\r\n"
-                              "Connection: close\r\n\r\n"
-                              "{\"code\": 0, \"message\": \"Execute success\"}");
-                break;
+                              "Connection: keep-alive\r\n\r\n");
+                engine_execute(ctx, nc, hm->body.p, hm->body.len);
+                mg_printf(nc, "0\r\n\r\n");
             } else {
                 mg_printf(nc, "HTTP/1.1 200 OK\r\n"
                               "Content-Type: application/json\r\n"
                               "Access-Control-Allow-Origin: *\r\n"
                               "Connection: close\r\n\r\n"
                               "{\"code\": 1, \"message\": \"Bad request\"}");
-                break;
             }
+            nc->flags |= MG_F_SEND_AND_CLOSE;
+            nc->user_data = 0;
             break;
         }
         default:
@@ -67,6 +77,7 @@ int main(int argc, char **argv) {
     struct mg_connection *c;
     char *s_http_port = "8091";
     struct mg_bind_opts bind_opts;
+    char *push;
 #if MG_ENABLE_SSL
     char *ssl_cert = 0;
     char *ssl_key = 0;
@@ -107,15 +118,17 @@ int main(int argc, char **argv) {
     mg_set_protocol_http_websocket(c);
     s_stop_signal = false;
 
-    ctx = engine_context();
-//    {
-//        int i = 0;
-//
-//        for (i = 0; i < 100000; ++i) {
-//            engine_execute(ctx, program_text, strlen(program_text));
-//        }
-//    }
-
+    ctx = engine_context(&mgr);
+#if defined(WIN32)
+    push = cwd_append("win");
+#else
+    push = cwd_append("unix");
+#endif
+    engine_add_library(ctx, push);
+    free(push);
+    push = cwd_append("sysroot");
+    engine_add_include(ctx, push);
+    free(push);
     while (s_stop_signal == false) {
         mg_mgr_poll(&mgr, 100);
     }
