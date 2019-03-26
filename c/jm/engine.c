@@ -14,7 +14,9 @@
 #include <memory.h>
 #include <libtcc.h>
 #include <io.h>
+#include <fcntl.h>
 #include <mongoose.h>
+#include "mt_common.h"
 #include "engine.h"
 
 struct EngineContext {
@@ -31,6 +33,7 @@ struct EngineContext {
 #else
     pthread_t handle;
 #endif
+    volatile void *signal_stop;
 };
 
 void d_printf(const char *fmt, ...) {
@@ -41,15 +44,11 @@ void d_printf(const char *fmt, ...) {
     fflush(stderr);
 }
 
-void usleep(long ms) {
-    Sleep(ms);
-}
-
 #if defined(WIN32)
-#define pipe(fd)  _pipe(fd, 4096, 0)
+#define pipe(fd)  _pipe(fd, 4096, _O_BINARY)
 #endif
 
-void read_pipe_and_send(int p, const struct EngineContext *ctx);
+void read_pipe_and_send(int std_id, int p, const struct EngineContext *ctx);
 
 #if defined(WIN32)
 
@@ -62,11 +61,6 @@ console_reader(void *param) {
     int stdout_pipe[2];
     int stderr_saved;
     int stdout_saved;
-    int ret;
-    FD_SET read_set;
-
-
-//    struct timeval time = {1, 0};
     struct EngineContext *ctx = (struct EngineContext *) param;
 
     if (pipe(stderr_pipe) != 0)
@@ -97,21 +91,9 @@ console_reader(void *param) {
         return 0;
     }
     close(stderr_pipe[1]);
-
-//    int max_fd = max(stderr_pipe[0], stdout_pipe[0]);
     while (ctx->console_reader_running) {
-        FD_ZERO(&read_set);
-//        FD_SET(stdout_pipe[0], &read_set);
-//        FD_SET(stderr_pipe[0], &read_set);
-
-//        if ( (ret = select(max_fd + 1, NULL, NULL, NULL, &time)) != SOCKET_ERROR) {
-//            if (FD_ISSET(stderr_pipe[0], &read_set)) {
-                read_pipe_and_send(stderr_pipe[0], ctx);
-//            }
-//            if (FD_ISSET(stdout_pipe[0], &read_set)) {
-                read_pipe_and_send(stdout_pipe[0], ctx);
-//            }
-//        }
+        read_pipe_and_send(2, stderr_pipe[0], ctx);
+        read_pipe_and_send(1, stdout_pipe[0], ctx);
     }
     dup2(stdout_saved, STDOUT_FILENO);
     dup2(stderr_saved, STDERR_FILENO);
@@ -119,55 +101,29 @@ console_reader(void *param) {
     close(stdout_pipe[0]);
     close(stderr_saved);
     close(stdout_saved);
+    signal_do(ctx->signal_stop);
     printf("Read console complete\n");
     return 0;
 }
 
-void read_pipe_and_send(int p, const struct EngineContext *ctx) {
+void read_pipe_and_send(int std_id, int p, const struct EngineContext *ctx) {
     int buf_read;
     char buf[2048];
 
     while ((buf_read = read(p, buf, sizeof(buf))) > 0) {
         if (ctx->c != 0) {
-            mg_printf(ctx->c, "%x\r\n%.*s\r\n", buf_read, buf_read, buf);
+            mg_printf(ctx->c, "%x\r\n%d%.*s\r\n", buf_read, std_id, buf_read, buf);
             mg_mgr_poll(ctx->mgr, 100);
         } else {
-            //
+            break;
         }
     }
 }
 
-//{
-//
-//static double sum(double a, double b) {
-//    return a + b;
-//}
-//
-//static enum v7_err js_sum(struct v7 *v7, v7_val_t *res) {
-//    double arg0 = v7_get_double(v7, v7_arg(v7, 0));
-//    double arg1 = v7_get_double(v7, v7_arg(v7, 1));
-//    double result = sum(arg0, arg1);
-//
-//    *res = v7_mk_number(v7, result);
-//    return V7_OK;
-//}
-//
-//static struct v7 *v7;
-//v7_val_t result;
-//enum v7_err rcode = V7_OK;
-//
-//v7 = v7_create();
-//v7_set_method(v7, v7_get_global(v7), "sum", &js_sum);
-//rcode = v7_exec(v7, "print('sum = ' + sum(1.2, 3.4))", &result);
-//if (rcode != V7_OK) {
-//v7_print_error(stderr, v7, "Evaluation error", result);
-//}
-//v7_destroy(v7);
-//}
-
 struct EngineContext *engine_context(struct mg_mgr *mgr) {
     struct EngineContext *ctx = calloc(1, sizeof(struct EngineContext));
     ctx->mgr = mgr;
+    signal_init(&ctx->signal_stop);
     return ctx;
 }
 
@@ -219,7 +175,7 @@ bool engine_execute(struct EngineContext *ctx, struct mg_connection *c, const ch
     }
     pthread_detach(ctx->handle);
 #endif
-
+    u_delay(100);
     program_text = calloc(1, size + 1);
     memcpy(program_text, text, size);
     for (i = 0; i < ctx->include_cnt; ++i) {
@@ -238,7 +194,7 @@ bool engine_execute(struct EngineContext *ctx, struct mg_connection *c, const ch
     }
     free(program_text);
     tcc_add_symbol(state, "printf", d_printf);
-    tcc_add_symbol(state, "usleep", usleep);
+    tcc_add_symbol(state, "usleep", u_delay);
     tcc_add_symbol(state, "hello_text", "Hello world!");
     if (tcc_relocate(state, TCC_RELOCATE_AUTO) < 0) {
         fprintf(stderr, "Error relocate");
@@ -253,7 +209,7 @@ bool engine_execute(struct EngineContext *ctx, struct mg_connection *c, const ch
     }
     i = (*main)(0, 0);
     ctx->console_reader_running = false;
-    usleep(1000);
+    signal_wait(ctx->signal_stop, 2000);
     ctx->c = 0;
     tcc_delete(state);
     return true;

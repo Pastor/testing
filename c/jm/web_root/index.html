@@ -22,7 +22,7 @@
 <body>
 
 <pre id="editor">
-#include &lt;tcclib.h&gt;
+#include &lt; tcclib. h&gt;
 #ifdef _WIN32                           /* dynamically linked data needs 'dllimport' */
  __attribute__((dllimport))
 #endif
@@ -31,7 +31,7 @@ extern void usleep(long ms);
 int main(int argc, char **argv) {
     int i;
 
-    for (i = 0; i < 100; ++i ) {
+    for (i = 0; i &lt; 100; ++i ) {
         printf("%s: %d\n", hello_text, i);
         usleep(100);
     }
@@ -49,11 +49,18 @@ int main(int argc, char **argv) {
         maxLines: 25
     });
 
+    function output(cb, msg) {
+        let lines = msg.split("\r\n");
+        for (let i = 0; i < lines.length; i++) {
+            cb(lines[i]);
+        }
+    }
+
     function send() {
         const xhr = new XMLHttpRequest();
         let last_index = 0;
         xhr.open("POST", "/execute", true);
-        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+        xhr.setRequestHeader('Content-Type', 'text/plain; charset=UTF-8');
 
         function receive_chunk() {
             const curr_index = xhr.responseText.length;
@@ -61,17 +68,28 @@ int main(int argc, char **argv) {
                 return;
             const chunk = xhr.responseText.substring(last_index, curr_index);
             last_index = curr_index;
-            console.debug("PROGRESS:", chunk);
+
+            switch (chunk.charAt(0)) {
+                case 2:
+                    output(console.error, chunk.substr(1));
+                    break;
+                case 1:
+                    output(console.info, chunk.substr(1));
+                    break;
+                default:
+                    output(console.warn, chunk);
+                    break;
+            }
         }
 
         xhr.onprogress = function (event) {
             receive_chunk();
         };
         // xhr.onreadystatechange = function () {
-            // if (xhr.readyState === 4) {
-            //     console.debug(xhr.responseText);
-            // }
-            // console.debug(xhr.responseText);
+        //     if (xhr.readyState === 4) {
+        //         console.log(xhr.responseText);
+        //     }
+        // console.debug(xhr.responseText);
         // };
         xhr.send(editor.getValue());
         //

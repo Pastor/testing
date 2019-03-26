@@ -25,6 +25,8 @@ include_directories(.)
 
 if (WIN32)
     set(SYSTEM_LIBRARIES ws2_32)
+else ()
+    set(SYSTEM_LIBRARIES pthread)
 endif ()
 
 if (ENABLE_OPENSSL)
@@ -33,7 +35,7 @@ endif ()
 add_subdirectory(3rdparty)
 
 add_executable(${PROJECT_NAME}_server http_server.c mongoose.c)
-add_library(${PROJECT_NAME}_engine STATIC engine.c engine.h)
+add_library(${PROJECT_NAME}_engine STATIC engine.c engine.h mt_common.c mt_common.h)
 #add_library(${PROJECT_NAME}_l STATIC lua-amalgamation.c)
 target_link_libraries(${PROJECT_NAME}_server ${PROJECT_NAME}_engine tcc ${SYSTEM_LIBRARIES} ${OPTIONAL_LIBRARIES})
 file(COPY web_root DESTINATION ${CMAKE_BINARY_DIR}/)

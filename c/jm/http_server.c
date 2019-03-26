@@ -45,14 +45,14 @@ static void handle_execute(struct mg_connection *nc, int ev, void *p) {
             if (mg_vcmp(&hm->uri, "/execute") == 0 && mg_vcmp(&hm->method, "POST") == 0) {
                 mg_printf(nc, "HTTP/1.1 200 OK\r\n"
                               "Transfer-Encoding: chunked\r\n"
-                              "Access-Control-Allow-Origin: *\r\n"
+                              "Content-Type: text/plain\r\n"
+                              "Access-Control-Allow-Origin:  *\r\n"
                               "Connection: keep-alive\r\n\r\n");
                 engine_execute(ctx, nc, hm->body.p, hm->body.len);
                 mg_printf(nc, "0\r\n\r\n");
             } else {
                 mg_printf(nc, "HTTP/1.1 200 OK\r\n"
                               "Content-Type: application/json\r\n"
-                              "Access-Control-Allow-Origin: *\r\n"
                               "Connection: close\r\n\r\n"
                               "{\"code\": 1, \"message\": \"Bad request\"}");
             }
