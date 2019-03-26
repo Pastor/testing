@@ -42,6 +42,8 @@ file(COPY web_root DESTINATION ${CMAKE_BINARY_DIR}/)
 
 if (WIN32)
     file(COPY 3rdparty/tinycc/win DESTINATION ${CMAKE_BINARY_DIR}/)
+elseif (APPLE)
+    file(COPY 3rdparty/tinycc/macosx DESTINATION ${CMAKE_BINARY_DIR}/)
 else ()
     file(COPY 3rdparty/tinycc/unix DESTINATION ${CMAKE_BINARY_DIR}/)
 endif ()

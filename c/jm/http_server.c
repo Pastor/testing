@@ -6,6 +6,10 @@
 #include "mongoose.h"
 #include "engine.h"
 
+#ifndef MAX_PATH
+#define MAX_PATH 260
+#endif
+
 static sig_atomic_t s_stop_signal = false;
 static struct mg_serve_http_opts s_http_server_opts;
 static  struct EngineContext *ctx;

@@ -3,17 +3,17 @@
 #include <winsock2.h>
 
 #else
+
 #include <pthread.h>
+
 #endif
 
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <malloc.h>
-#include <memory.h>
 #include <libtcc.h>
-#include <io.h>
+//#include <io.h>
 #include <fcntl.h>
 #include <mongoose.h>
 #include "mt_common.h"
@@ -54,6 +54,7 @@ void read_pipe_and_send(int std_id, int p, const struct EngineContext *ctx);
 
 DWORD WINAPI
 #else
+
 void *
 #endif
 console_reader(void *param) {
@@ -61,6 +62,9 @@ console_reader(void *param) {
     int stdout_pipe[2];
     int stderr_saved;
     int stdout_saved;
+    fd_set fds;
+    int maxfd;
+    struct timeval timeout = {0, 100};
     struct EngineContext *ctx = (struct EngineContext *) param;
 
     if (pipe(stderr_pipe) != 0)
@@ -72,7 +76,7 @@ console_reader(void *param) {
     }
     stdout_saved = dup(STDOUT_FILENO);
     stderr_saved = dup(STDERR_FILENO);
-    if ( dup2(stdout_pipe[1], STDOUT_FILENO) == -1 ) {
+    if (dup2(stdout_pipe[1], STDOUT_FILENO) == -1) {
         close(stderr_pipe[0]);
         close(stderr_pipe[1]);
         close(stdout_pipe[0]);
@@ -82,7 +86,7 @@ console_reader(void *param) {
         return 0;
     }
     close(stdout_pipe[1]);
-    if ( dup2(stderr_pipe[1], STDERR_FILENO) == -1 ) {
+    if (dup2(stderr_pipe[1], STDERR_FILENO) == -1) {
         close(stderr_pipe[0]);
         close(stderr_pipe[1]);
         close(stdout_pipe[0]);
@@ -91,9 +95,26 @@ console_reader(void *param) {
         return 0;
     }
     close(stderr_pipe[1]);
+
+    assert(fcntl(stderr_pipe[0], F_SETFL, O_NONBLOCK) != -1);
+    assert(fcntl(stdout_pipe[0], F_SETFL, O_NONBLOCK) != -1);
+
+    maxfd = stderr_pipe[0] > stdout_pipe[0] ? stderr_pipe[0] : stdout_pipe[0];
+
     while (ctx->console_reader_running) {
-        read_pipe_and_send(2, stderr_pipe[0], ctx);
-        read_pipe_and_send(1, stdout_pipe[0], ctx);
+        FD_ZERO(&fds);
+        FD_SET(stderr_pipe[0], &fds);
+        FD_SET(stdout_pipe[0], &fds);
+
+        if (select(maxfd + 1, &fds, NULL, NULL, &timeout) > 0) {
+            if (FD_ISSET(stderr_pipe[0], &fds)) {
+                read_pipe_and_send(2, stderr_pipe[0], ctx);
+            }
+
+            if (FD_ISSET(stdout_pipe[0], &fds)) {
+                read_pipe_and_send(1, stdout_pipe[0], ctx);
+            }
+        }
     }
     dup2(stdout_saved, STDOUT_FILENO);
     dup2(stderr_saved, STDERR_FILENO);
@@ -107,12 +128,12 @@ console_reader(void *param) {
 }
 
 void read_pipe_and_send(int std_id, int p, const struct EngineContext *ctx) {
-    int buf_read;
+    ssize_t buf_read;
     char buf[2048];
 
     while ((buf_read = read(p, buf, sizeof(buf))) > 0) {
         if (ctx->c != 0) {
-            mg_printf(ctx->c, "%x\r\n%d%.*s\r\n", buf_read, std_id, buf_read, buf);
+            mg_printf(ctx->c, "%x\r\n%d%.*s\r\n", (int) buf_read, std_id, (int) buf_read, buf);
             mg_mgr_poll(ctx->mgr, 100);
         } else {
             break;
@@ -155,11 +176,12 @@ bool engine_execute(struct EngineContext *ctx, struct mg_connection *c, const ch
     int (*main)(int, char **);
     TCCState *state;
     int i;
+    bool returning = false;
     char *program_text;
 
     state = tcc_new();
     if (state == 0 || text == 0) {
-        return 0;
+        return false;
     }
 
     ctx->c = c;
@@ -171,7 +193,7 @@ bool engine_execute(struct EngineContext *ctx, struct mg_connection *c, const ch
     CloseHandle(ctx->handle);
 #else
     if (pthread_create(&ctx->handle, NULL, console_reader, ctx) != 0) {
-        return 0;
+        goto complete;
     }
     pthread_detach(ctx->handle);
 #endif
@@ -188,9 +210,8 @@ bool engine_execute(struct EngineContext *ctx, struct mg_connection *c, const ch
     tcc_set_output_type(state, TCC_OUTPUT_MEMORY);
     if (tcc_compile_string(state, program_text) == -1) {
         fprintf(stderr, "Error compile\n");
-        tcc_delete(state);
         free(program_text);
-        return false;
+        goto complete;
     }
     free(program_text);
     tcc_add_symbol(state, "printf", d_printf);
@@ -198,20 +219,20 @@ bool engine_execute(struct EngineContext *ctx, struct mg_connection *c, const ch
     tcc_add_symbol(state, "hello_text", "Hello world!");
     if (tcc_relocate(state, TCC_RELOCATE_AUTO) < 0) {
         fprintf(stderr, "Error relocate");
-        tcc_delete(state);
-        return false;
+        goto complete;
     }
     main = tcc_get_symbol(state, "main");
     if (main == 0) {
         fprintf(stderr, "Error get main function\n");
-        tcc_delete(state);
-        return false;
+        goto complete;
     }
     i = (*main)(0, 0);
+    returning = true;
+    complete:
     ctx->console_reader_running = false;
-    signal_wait(ctx->signal_stop, 2000);
+    signal_wait(ctx->signal_stop, 5000);
     ctx->c = 0;
     tcc_delete(state);
-    return true;
+    return returning;
 }
 
