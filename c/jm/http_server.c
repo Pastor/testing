@@ -127,6 +127,7 @@ int main(int argc, char **argv) {
     push = cwd_append("win");
 #else
     push = cwd_append("unix");
+    engine_add_library(ctx, "/usr/lib/x86_64-linux-gnu");
 #endif
     engine_add_library(ctx, push);
     free(push);

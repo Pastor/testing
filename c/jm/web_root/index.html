@@ -22,7 +22,7 @@
 <body>
 
 <pre id="editor">
-#include &lt; tcclib. h&gt;
+#include &lt;tcclib.h&gt;
 #ifdef _WIN32                           /* dynamically linked data needs 'dllimport' */
  __attribute__((dllimport))
 #endif
@@ -70,10 +70,10 @@ int main(int argc, char **argv) {
             last_index = curr_index;
 
             switch (chunk.charAt(0)) {
-                case 2:
+                case '2':
                     output(console.error, chunk.substr(1));
                     break;
-                case 1:
+                case '1':
                     output(console.info, chunk.substr(1));
                     break;
                 default:
