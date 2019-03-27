@@ -26,7 +26,7 @@ include_directories(.)
 if (WIN32)
     set(SYSTEM_LIBRARIES ws2_32)
 else ()
-    set(SYSTEM_LIBRARIES pthread)
+    set(SYSTEM_LIBRARIES pthread dl)
 endif ()
 
 if (ENABLE_OPENSSL)
