@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stm8s.h>
 #include <uart.h>
 #include <delay.h>
@@ -59,14 +60,14 @@ void main() {
     enable_interrupts();
     while (true) {
         /*__asm
-         	halt;
+             halt;
         __endasm;*/
 
         if (b_updated == true) {
-        	printf("Interrupted[%05d] %d\r\n", i_count++, h_count);
-        	toggle_led();
-        	b_updated = false;
+            printf("Interrupted[%05d] %d\r\n", i_count++, h_count);
+            toggle_led();
+            b_updated = false;
         }          
-		/*delay_ms(500);*/
+        /*delay_ms(500);*/
     }
 }

@@ -5,6 +5,7 @@ ARCH = stm8
 
 F_CPU   ?= 2000000
 TARGET  ?= main.ihx
+TARGET_Elf  ?= main.elf
 
 LIBDIR   = ../../lib
 
@@ -27,11 +28,15 @@ CFLAGS  += --stack-auto --noinduction --use-non-free
 ## Extra optimization rules - use with care
 #CFLAGS  += --peep-file $(LIBDIR)/util/extra.def
 LDFLAGS  = -m$(ARCH) -l$(ARCH) --out-fmt-ihx
+LDFLAGS_Elf = -m$(ARCH) -l$(ARCH) --out-fmt-elf
 
-all: $(TARGET) size
+all: $(TARGET) $(TARGET_Elf) size
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) -o $@
+	
+$(TARGET_Elf): $(OBJS)
+	$(CC) ${LDFLAGS_Elf} $(OBJS) -o $@
 
 %.rel: %.c
 	$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
