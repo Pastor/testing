@@ -1,0 +1,4 @@
+UBoot  size 504510,  offset 0x00000000 - 0x0007B2BE
+zImage size 4111096, offset 0x0007B2BE - 0x00466DB6
+RootFS size 9179145, offset 0x00466DB6 - na
+Result 16777216 bytes
