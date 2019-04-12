@@ -7,7 +7,7 @@ F_CPU   ?= 2000000
 TARGET  ?= main.ihx
 TARGET_Elf  ?= main.elf
 
-LIBDIR   = /home/pastor/repo/testing/stm8s/lib
+LIBDIR   = ../../lib
 
 SRCS    := $(wildcard *.c $(LIBDIR)/*.c)
 ASRCS   := $(wildcard *.s $(LIBDIR)/*.s)
