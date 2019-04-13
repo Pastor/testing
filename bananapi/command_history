@@ -1,0 +1,179 @@
+    1  mkdir github
+    2  cd github/
+    3  git clone https://github.com/u-boot/u-boot.git
+    4  cd u-boot/
+    5  make menuconfig
+    6  sudo apt install bison
+    7  make menuconfig
+    8  sudo apt install flex
+    9  make menuconfig
+   10  make
+   11  sudo apt install SDL2 SDL2-images SDL2-mixer SDL2-net
+   12  sudo apt install libSDL2 SDL2-images SDL2-mixer SDL2-net
+   13  sudo apt install libSDL2-dev
+   14  sudo apt install SDL2-dev
+   15  sudo apt install SDL2
+   16  sudo apt search SDL2
+   17  sudo apt install libsdl2-dev libsdl2-mixer-dev libsdl2-net-dev libsdl2-ttf-dev
+   18  make
+   19  sudo apt search SDL
+   20  sudo apt install libsdl-dev libsdl-mixer-dev libsdl-net-dev libsdl-ttf-dev
+   21  sudo apt install libsdl1.2-dev
+   22  make
+   23  make mrproper
+   24  make defconfig
+   25  make
+   26  sudo apt install libssl0dev
+   27  sudo apt install libssl-dev
+   28  make
+   29  make help
+   30  make all
+   31  mc
+   32  make mrproper
+   33  mkdir ~/build/u-boot
+   34  mkdir -p ~/build/u-boot
+   35  make O=~/build/u-boot defconfig
+   36  make O=~/build/u-boot all
+   37  mc
+   38  cd github/
+   39  git clone https://github.com/Pastor/testing.git
+   40  df -h
+   41  cd testing/
+   42  cd c
+   43  ll
+   44  cd jm
+   45  ll
+   46  mkdir .build_l64
+   47  cd .build_l64/
+   48  cmake ..
+   49  sudo apt install cmake
+   50  cmake ..
+   51  mkdir ../3rdparty/tinycc/unix
+   52  cmake ..
+   53  cd ..
+   54  ll
+   55  cd 3rdparty/
+   56  ll
+   57  cd tinycc/
+   58  ll
+   59  cd src
+   60  ll
+   61  ./configure 
+   62  make
+   63  sudo apt install gcc-multilib
+   64  make
+   65  sudo apt install makeinfo
+   66  sudo apt-get install texinfo
+   67  make
+   68  mc
+   69  ll
+   70  cd ..
+   71  cd .build_l64/
+   72  make distclean
+   73  make clean
+   74  cmake ..
+   75  make
+   76  cmake -DARCH=x64 ..
+   77  make
+   78  mcedit ../CMakeLists.txt 
+   79  cmake -DARCH=x64 ..
+   80  make
+   81  ll
+   82  ll unix/
+   83  cd ..
+   84  git status
+   85  vim .gitignore 
+   86  git status
+   87  git add .
+   88  git commit -a -m "Unix compile JM TCC server"
+   89  git config --global user.email "viruszold@gmail.com"
+   90  git config --global user.name "Pastor"
+   91  git commit -a -m "Unix compile JM TCC server"
+   92  git push
+   93  cd .build_l64/
+   94  ./jm_server 
+   95  mcedit ../web_root/index.html 
+   96  cmake -DARCH=x64 ..
+   97  make
+   98  ./jm_server 
+   99  ll
+  100  cd ..
+  101  cd 3rdparty/tinycc/
+  102  ll
+  103  cd src
+  104  sudo make install
+  105  cd ../../
+  106  cd ..
+  107  cd .build_l64/
+  108  ./jm_server 
+  109  whereis libc
+  110  mcedit ../engine.c 
+  111  mcedit ../http_server.c 
+  112  make
+  113  ./jm_server 
+  114  whereis io.h
+  115  git status
+  116  git add .
+  117  git commit -a -m "Append libraries to Unix"
+  118  git push
+  119  cd config/
+  120  sudo apt install dos2unix
+  121  dos2unix SPI64_Banana_Pi_M2M_Configuration 
+  122  cd ..
+  123  cd github/u-boot/
+  124  make help
+  125  cd ..
+  126  mc
+  127  ll
+  128  cd config/
+  129  touch build_uboot.sh
+  130  dos2unix build_uboot.sh 
+  131  chmod 0755 build_uboot.sh 
+  132  ./build_uboot.sh 
+  133  dos2unix build_uboot.sh 
+  134  ./build_uboot.sh 
+  135  sudo apt search arm-none-gnueabi-
+  136  sudo apt search gnueabi
+  137  sudo apt search arm-none
+  138  sudo apt install gcc-arm-none-eabi 
+  139  dos2unix build_uboot.sh 
+  140  ./build_uboot.sh 
+  141  sudo apt install python2
+  142  sudo apt install python27
+  143  sudo apt install python2.7
+  144  ./build_uboot.sh 
+  145  sudo apt install python2.6
+  146  sudo apt install python2
+  147  mkdir ~/bin
+  148  cd ~/bin
+  149  ll
+  150  ln -s
+  151  ln -help
+  152  ln --help
+  153  whereis python27
+  154  whereis python2.7
+  155  ln -s /usr/bin/python2.7 ~/bin/python2
+  156  ll
+  157  cd ..
+  158  mc
+  159  cd .local/
+  160  mkdir bin
+  161  cd bin
+  162  ln -s /usr/bin/python2.7 ~/.local/bin/python2
+  163  ll
+  164  hash -r
+  165  echo $PATH
+  166  cd ~
+  167  . .profile 
+  168  echo $PATH
+  169  cd config/
+  170  ./build_uboot.sh 
+  171  sudo apt install swig
+  172  ./build_uboot.sh 
+  173  sudo apt search python-dev
+  174  sudo apt install python-dev
+  175  ./build_uboot.sh 
+  176  dos2unix SPI64_Banana_Pi_M2M.h 
+  177  ./build_uboot.sh 
+  178  grep -rnw ~/github/u-boot/ -e "CONFIG_ENV_SECT_SIZE"
+  179  history > command_history

@@ -14,6 +14,7 @@ cp -f ${UBOOT_CONF} ${UBOOT_SRC}/configs/${UBOOT_CONFIG_NAME}_defconfig
 rm -rf ${UBOOT_TARGET} && mkdir -p ${UBOOT_TARGET}
 cd ${UBOOT_SRC}
 make O=${UBOOT_TARGET} mrproper && make O=${UBOOT_TARGET} ${UBOOT_CONFIG_NAME}_defconfig
+#make O=${UBOOT_TARGET} menuconfig
 make O=${UBOOT_TARGET} all -j6
 cd ${CWD}
 
