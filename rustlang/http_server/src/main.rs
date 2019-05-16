@@ -23,6 +23,7 @@ use rocket_contrib::json::{Json, JsonValue};
 use rocket::fairing::AdHoc;
 
 use rusqlite::{Connection, Error};
+use std::cell::RefCell;
 
 #[cfg(test)]
 mod tests;
@@ -35,7 +36,8 @@ struct Message {
 }
 
 struct Server {
-    map: HashMap<ID, String>
+    map: HashMap<ID, String>,
+    con: Box<Connection>
 }
 
 type ID = usize;
@@ -44,8 +46,8 @@ type ServerState = Mutex<Server>;
 struct AuthorizeGuard(ID);
 
 impl Server {
-    fn new() -> Server {
-        Server { map: HashMap::<ID, String>::new() }
+    fn new(con: Connection) -> Server {
+        Server { map: HashMap::<ID, String>::new(), con: Box::new(con) }
     }
 }
 
@@ -145,7 +147,7 @@ fn main_rocket() -> rocket::Rocket {
             let hi = rocket.config().get_str("hi").unwrap_or("Default");
             info!("hi: {}", hi);
         }))
-        .manage(Mutex::new(Server::new()))
+        .manage(Mutex::new(Server::new(conn)))
 }
 
 fn main() {

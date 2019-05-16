@@ -6,11 +6,19 @@ edition = "2018"
 build = 'build.rs'
 
 [dependencies]
-rocket = "0.4.0"
-rocket_contrib = "0.4.0"
-serde = "1.0.83"
-serde_derive = "1.0.83"
-serde_json = "1.0.33"
-rusqlite = "0.14"
-log = "0.4"
-env_logger = "0.6"
+rocket = "^0.4.0"
+rocket_contrib = "^0.4.0"
+serde = "^1.0.83"
+serde_derive = "^1.0.83"
+serde_json = "^1.0.33"
+rusqlite = "^0.14"
+log = "^0.4"
+env_logger = "^0.6"
+
+[build-dependencies]
+cc = "^1.0.37"
+
+[target.x86_64-pc-windows-msvc]
+rustflags = [
+    "-C", "target-feature=+crt-static"
+]
