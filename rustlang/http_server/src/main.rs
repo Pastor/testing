@@ -111,6 +111,10 @@ fn get(id: ID, state: State<ServerState>) -> Option<Json<Message>> {
 
 #[catch(404)]
 fn not_found(req: &Request) -> JsonValue {
+    req.headers().iter().all(|filed| {
+        warn!("{}: {}", filed.name.into_string(), filed.value.to_string());
+        true
+    });
     json!({
         "status": "error",
         "reason": format!("Resource '{}' was not found.", req.uri())
