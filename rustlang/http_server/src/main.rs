@@ -14,20 +14,22 @@ extern crate serde_derive;
 
 use std::borrow::Borrow;
 use std::borrow::BorrowMut;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+use rocket::fairing::AdHoc;
 use rocket::outcome::Outcome::*;
 use rocket::request::{self, FromRequest, Request, State};
 use rocket_contrib::json::{Json, JsonValue};
-use rocket::fairing::AdHoc;
-
 use rusqlite::{Connection, Error};
-use std::cell::RefCell;
+
+use crate::config::Config;
 
 #[cfg(test)]
 mod tests;
 
+mod config;
 
 #[derive(Serialize, Deserialize)]
 struct Message {
@@ -37,7 +39,7 @@ struct Message {
 
 struct Server {
     map: HashMap<ID, String>,
-    con: Box<Connection>
+    con: Box<Connection>,
 }
 
 type ID = usize;
@@ -47,7 +49,10 @@ struct AuthorizeGuard(ID);
 
 impl Server {
     fn new(con: Connection) -> Server {
-        Server { map: HashMap::<ID, String>::new(), con: Box::new(con) }
+        Server {
+            map: HashMap::<ID, String>::new(),
+            con: Box::new(con),
+        }
     }
 }
 
@@ -65,7 +70,6 @@ impl<'a, 'r> FromRequest<'a, 'r> for AuthorizeGuard {
 fn authorized(_authorized: AuthorizeGuard, _map: State<ServerState>) -> JsonValue {
     json!({ "status": "success", "reason": "Authorized" })
 }
-
 
 // TODO: This example can be improved by using `route` with multiple HTTP verbs.
 #[post("/<id>", format = "json", data = "<message>")]
@@ -130,18 +134,23 @@ fn not_found(req: &Request) -> JsonValue {
 /// init_database(&conn);
 /// ```
 fn init_database(conn: &Connection) {
-    conn.execute("CREATE TABLE entries (
+    conn.execute(
+        "CREATE TABLE entries (
                   id              INTEGER PRIMARY KEY,
                   name            TEXT NOT NULL
-                  )", &[])
-        .expect("create entries table");
+                  )",
+        &[],
+    )
+    .expect("create entries table");
 
-    conn.execute("INSERT INTO entries (id, name) VALUES ($1, $2)",
-                 &[&0, &"Rocketeer"])
-        .expect("insert single entry into entries table");
+    conn.execute(
+        "INSERT INTO entries (id, name) VALUES ($1, $2)",
+        &[&0, &"Rocketeer"],
+    )
+    .expect("insert single entry into entries table");
 }
 
-fn main_rocket() -> rocket::Rocket {
+fn main_rocket(config: &Config) -> rocket::Rocket {
     let conn = Connection::open_in_memory().expect("in memory db");
     init_database(&conn);
     rocket::ignite()
@@ -155,6 +164,7 @@ fn main_rocket() -> rocket::Rocket {
 }
 
 fn main() {
-//    env_logger::init();
-    main_rocket().launch();
+    let config = Config::new("Configuration.toml").unwrap();
+    //    env_logger::init();
+    main_rocket(&config).launch();
 }
