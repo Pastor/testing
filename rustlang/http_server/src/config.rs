@@ -8,6 +8,7 @@ use serde_derive::{Deserialize, Serialize};
 pub struct Config {
     ip: Option<String>,
     port: Option<u16>,
+    #[serde(rename = "instance")]
     instance: Vec<Instance>,
 }
 

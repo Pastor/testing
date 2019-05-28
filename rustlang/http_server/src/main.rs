@@ -3,7 +3,7 @@
 
 #[macro_use]
 extern crate log;
-//extern crate env_logger;
+extern crate env_logger;
 #[macro_use]
 extern crate rocket;
 #[macro_use]
@@ -150,7 +150,7 @@ fn init_database(conn: &Connection) {
     .expect("insert single entry into entries table");
 }
 
-fn main_rocket(config: &Config) -> rocket::Rocket {
+fn main_rocket(_config: &Config) -> rocket::Rocket {
     let conn = Connection::open_in_memory().expect("in memory db");
     init_database(&conn);
     rocket::ignite()
@@ -164,7 +164,7 @@ fn main_rocket(config: &Config) -> rocket::Rocket {
 }
 
 fn main() {
-    let config = Config::new("Configuration.toml").unwrap();
     //    env_logger::init();
+    let config = Config::new("Configuration.toml").unwrap();
     main_rocket(&config).launch();
 }
