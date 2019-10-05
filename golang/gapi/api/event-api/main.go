@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-contrib/logger"
+	"github.com/gin-gonic/contrib/cors"
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -189,6 +190,7 @@ func main() {
 	router := gin.Default()
 
 	router.Use(logger.SetLogger())
+	router.Use(cors.Default())
 	router.Use(static.Serve("/", static.LocalFile("../client", true)))
 
 	system := router.Group("/system")
