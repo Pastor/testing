@@ -1,58 +1,62 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	jose "github.com/devopsfaith/krakend-jose"
-	"io"
-	"io/ioutil"
+	"net/http"
 )
 
-const pluginName = "krakend-scopes"
+const namespace = "github.com/Pastor/testing/golang/gapi"
 
-var Registrable registrable
+var HandlerRegisterer = registrable("gapi")
 
-type registrable int
-
-type Mein struct{}
-
-func (m Mein) Reject(map[string]interface{}) bool {
-	return true
+type registrable string
+type ScopeConfiguration struct {
+	AllowedScopes []string
+	Name          string
 }
 
-func (r *registrable) RegisterDecoder(setter func(name string, dec func(bool) func(io.Reader, *map[string]interface{}) error) error) error {
-	fmt.Println("registrable", r, "from plugin", pluginName, "is registering its decoder components")
-
-	return setter(pluginName, decoderFactory)
-}
-
-func (r *registrable) RegisterExternal(setter func(namespace, name string, v interface{})) error {
-	fmt.Println("registrable", r, "from plugin", pluginName, "is registering its components depending on external modules")
-
-	setter("namespace1", pluginName, doubleInt)
-	var reject jose.Rejecter = Mein{}
-	fmt.Println(reject)
-	return nil
-}
-
-func doubleInt(x int) int {
-	return 2 * x
-}
-
-func decoderFactory(bool) func(reader io.Reader, _ *map[string]interface{}) error {
-	fmt.Println("calling the decoder factory:", pluginName)
-
-	return decoder
-}
-
-func decoder(reader io.Reader, _ *map[string]interface{}) error {
-	fmt.Println("calling the decoder:", pluginName)
-
-	d, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return err
-	}
-	fmt.Println("decoder:", pluginName, string(d))
-	return nil
+func (r registrable) RegisterHandlers(f func(
+	name string,
+	handler func(context.Context, map[string]interface{}, http.Handler) (http.Handler, error),
+)) {
+	f(string(r), func(ctx context.Context, extra map[string]interface{}, handler http.Handler) (http.Handler, error) {
+		cfg := parse(extra)
+		if cfg == nil {
+			return nil, errors.New("wrong config")
+		}
+		if cfg.Name != string(r) {
+			return nil, fmt.Errorf("unknown register %s", cfg.Name)
+		}
+		return handler, nil
+	})
 }
 
 func main() {}
+
+func parse(extra map[string]interface{}) *ScopeConfiguration {
+	name, ok := extra["name"].(string)
+	if !ok {
+		return nil
+	}
+	rawScopes, ok := extra["scopes"]
+	if !ok {
+		return nil
+	}
+	es, ok := rawScopes.([]interface{})
+	if !ok || len(es) < 2 {
+		return nil
+	}
+	scopes := make([]string, len(es))
+	for i, e := range es {
+		scopes[i] = e.(string)
+	}
+
+	return &ScopeConfiguration{
+		AllowedScopes: scopes,
+		Name:          name,
+	}
+}
+
+//CEL:  && JWT.scope.matches('*access*')

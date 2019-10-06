@@ -1,0 +1,131 @@
+{
+  "version": 2,
+  "name": "Testing KrakenD event API",
+  "port": 8000,
+  "cache_ttl": "3600s",
+  "timeout": "3s",
+  "plugin": {
+    "pattern": ".so",
+    "folder": "/home/pastor/repo/testing/golang/gapi/"
+  },
+  "extra_config": {
+    "github_com/devopsfaith/krakend-gologging": {
+      "level": "DEBUG",
+      "prefix": "[KRAKEND]",
+      "syslog": false,
+      "stdout": true
+    },
+    "github_com/devopsfaith/krakend-metrics": {
+      "collection_time": "60s",
+      "proxy_disabled": false,
+      "router_disabled": false,
+      "backend_disabled": false,
+      "endpoint_disabled": false,
+      "listen_address": ":8090"
+    },
+    "github_com/devopsfaith/krakend-cors": {
+      "allow_origins": [
+        "http://192.168.99.100:3000",
+        "http://localhost:3000"
+      ],
+      "allow_methods": [
+        "POST",
+        "PUT",
+        "GET"
+      ],
+      "allow_headers": [
+        "Origin",
+        "Authorization",
+        "Content-Type"
+      ],
+      "expose_headers": [
+        "Content-Length"
+      ],
+      "max_age": "12h"
+    },
+    "github_com/devopsfaith/bloomfilter": {
+      "N": 10000000,
+      "P": 0.0000001,
+      "HashName": "optimal",
+      "TTL": 1500,
+      "TokenKeys": [
+        "jti"
+      ]
+    },
+    "github_com/devopsfaith/krakend/transport/http/server/handler": {
+      "name": "gapi",
+      "scopes": [
+        "event",
+        "basic"
+      ]
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/api/v1/events",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "querystring_params": [
+        "*"
+      ],
+      "headers_to_pass": [
+        "*"
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://keycloak.ein.su:8080/auth/realms/test/protocol/openid-connect/certs",
+          "issuer": "http://keycloak.ein.su:8080/auth/realms/test",
+          "disable_jwk_security": true
+        },
+        "github.com/devopsfaith/krakend-cel": [
+          {
+            "check_expr": "JWT.scope.matches('.*email.*')"
+          }
+        ]
+      },
+      "backend": [
+        {
+          "host": [
+            "http://127.0.0.1:8080"
+          ],
+          "url_pattern": "/events/",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/v1/events/{id}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "querystring_params": [
+        "*"
+      ],
+      "headers_to_pass": [
+        "*"
+      ],
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://keycloak.ein.su:8080/auth/realms/test/protocol/openid-connect/certs",
+          "issuer": "http://keycloak.ein.su:8080/auth/realms/test",
+          "disable_jwk_security": true
+        },
+        "github.com/devopsfaith/krakend-cel": [
+          {
+            "check_expr": "JWT.scope.matches('.*ext_information.*')"
+          }
+        ]
+      },
+      "backend": [
+        {
+          "host": [
+            "http://127.0.0.1:8080"
+          ],
+          "url_pattern": "/events/{id}",
+          "encoding": "no-op"
+        }
+      ]
+    }
+  ]
+}
