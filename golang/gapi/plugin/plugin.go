@@ -1,66 +1,58 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"net/http"
+	jose "github.com/devopsfaith/krakend-jose"
+	"io"
+	"io/ioutil"
 )
 
-func init() {
-	fmt.Println("krakend-grpc-post plugin loaded!!!")
+const pluginName = "krakend-scopes"
+
+var Registrable registrable
+
+type registrable int
+
+type Mein struct{}
+
+func (m Mein) Reject(map[string]interface{}) bool {
+	return true
 }
 
-var ClientRegisterer = registerer("grpc-post")
+func (r *registrable) RegisterDecoder(setter func(name string, dec func(bool) func(io.Reader, *map[string]interface{}) error) error) error {
+	fmt.Println("registrable", r, "from plugin", pluginName, "is registering its decoder components")
 
-type registerer string
-
-func (r registerer) RegisterClients(f func(
-	name string,
-	handler func(context.Context, map[string]interface{}) (http.Handler, error),
-)) {
-	f(string(r), func(ctx context.Context, extra map[string]interface{}) (http.Handler, error) {
-		cfg := parse(extra)
-		if cfg == nil {
-			return nil, errors.New("wrong config")
-		}
-		if cfg.name != string(r) {
-			return nil, fmt.Errorf("unknown register %s", cfg.name)
-		}
-		mux := http.NewServeMux()
-		return mux, nil
-		//gateway.New(ctx, cfg.helloEndpoint, cfg.routeEndpoint)
-	})
+	return setter(pluginName, decoderFactory)
 }
 
-func parse(extra map[string]interface{}) *opts {
-	name, ok := extra["name"].(string)
-	if !ok {
-		return nil
-	}
+func (r *registrable) RegisterExternal(setter func(namespace, name string, v interface{})) error {
+	fmt.Println("registrable", r, "from plugin", pluginName, "is registering its components depending on external modules")
 
-	rawEs, ok := extra["endpoints"]
-	if !ok {
-		return nil
-	}
-	es, ok := rawEs.([]interface{})
-	if !ok || len(es) < 2 {
-		return nil
-	}
-	endpoints := make([]string, len(es))
-	for i, e := range es {
-		endpoints[i] = e.(string)
-	}
-
-	return &opts{
-		name:          name,
-		helloEndpoint: endpoints[0],
-		routeEndpoint: endpoints[1],
-	}
+	setter("namespace1", pluginName, doubleInt)
+	var reject jose.Rejecter = Mein{}
+	fmt.Println(reject)
+	return nil
 }
 
-type opts struct {
-	name          string
-	helloEndpoint string
-	routeEndpoint string
+func doubleInt(x int) int {
+	return 2 * x
 }
+
+func decoderFactory(bool) func(reader io.Reader, _ *map[string]interface{}) error {
+	fmt.Println("calling the decoder factory:", pluginName)
+
+	return decoder
+}
+
+func decoder(reader io.Reader, _ *map[string]interface{}) error {
+	fmt.Println("calling the decoder:", pluginName)
+
+	d, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+	fmt.Println("decoder:", pluginName, string(d))
+	return nil
+}
+
+func main() {}
