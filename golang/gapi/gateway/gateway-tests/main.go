@@ -4,7 +4,7 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/gookit/color"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -52,12 +52,14 @@ func GetToken() (*Token, error) {
 func main() {
 	token, err := GetToken()
 	if err != nil {
+		color.Error.Println(err)
 		panic(err)
 	}
 	parts := strings.Split(token.AccessToken, ".")
 	bytes, err := b64.RawStdEncoding.DecodeString(parts[1])
 	if err != nil {
+		color.Error.Prompt(err.Error())
 		panic(err)
 	}
-	fmt.Print(string(bytes))
+	color.Info.Prompt(string(bytes))
 }
