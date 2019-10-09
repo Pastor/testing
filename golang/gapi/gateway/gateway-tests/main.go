@@ -1,7 +1,6 @@
 package main
 
 import (
-	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +23,11 @@ const (
 	ClientSecret    = InternalSecret
 	TokenUrl        = "http://" + BaseUrl + "/auth/realms/test/protocol/openid-connect/token"
 	UserInfoUrl     = "http://" + BaseUrl + "/auth/realms/test/protocol/openid-connect/userinfo"
+
+	LocalBaseUrl    = "http://127.0.0.1:8081"
+	InternalBaseUrl = "http://10.50.3.172:8100/api/v1"
+	ExternalBaseUrl = "http://10.50.3.172:8100/api/v1"
+	ApiBaseUrl      = InternalBaseUrl
 )
 
 type Token struct {
@@ -36,6 +40,15 @@ type Token struct {
 type AuthorizedClient struct {
 	Token  *Token
 	Client *http.Client
+}
+
+type ApiMethod struct {
+	Method string `json:"method"`
+	Path   string `json:"path"`
+}
+
+var Methods []ApiMethod = []ApiMethod{
+	{Method: "GET", Path: "/developers"},
 }
 
 func UserInfo(client *AuthorizedClient) (map[string]interface{}, error) {
@@ -94,21 +107,37 @@ func main() {
 		color.Error.Println(err)
 		os.Exit(-1)
 	}
-	parts := strings.Split(token.AccessToken, ".")
-	bytes, err := b64.RawStdEncoding.DecodeString(parts[1])
-	if err != nil {
-		color.Error.Prompt(err.Error())
-		os.Exit(-1)
-	}
-	color.Info.Prompt(string(bytes))
+	//parts := strings.Split(token.AccessToken, ".")
+	//bytes, err := b64.RawStdEncoding.DecodeString(parts[1])
+	//if err != nil {
+	//	color.Error.Prompt(err.Error())
+	//	os.Exit(-1)
+	//}
+	//color.Info.Prompt(string(bytes))
 
 	client := &AuthorizedClient{Token: token, Client: http.DefaultClient}
-	info, err := UserInfo(client)
-	if err != nil {
-		color.Error.Prompt(err.Error())
-		os.Exit(-1)
+
+	for _, method := range Methods {
+		r, _ := http.NewRequest(method.Method, ApiBaseUrl+method.Path, nil)
+		resp, err := client.Do(r)
+		pref := fmt.Sprintf("%s %s", method.Method, method.Path)
+		if err != nil {
+			color.Error.Prompt(err.Error())
+		} else {
+			if resp.StatusCode == 200 {
+				color.Debug.Prompt(fmt.Sprintf("%s - %s", pref, resp.Status))
+			} else {
+				color.Error.Prompt(fmt.Sprintf("%s - %s", pref, resp.Status))
+			}
+		}
 	}
-	color.Info.Prompt(fmt.Sprintf("%v", info))
+	//
+	//info, err := UserInfo(client)
+	//if err != nil {
+	//	color.Error.Prompt(err.Error())
+	//	os.Exit(-1)
+	//}
+	//color.Info.Prompt(fmt.Sprintf("%v", info))
 }
 
 func (client *AuthorizedClient) Do(request *http.Request) (*http.Response, error) {
