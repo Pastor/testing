@@ -1,0 +1,46 @@
+{
+  "port": 8000,
+  "extra_config": {
+    "github_com/devopsfaith/krakend-gologging": {
+      "level": "DEBUG",
+      "prefix": "[KRAKEND]",
+      "syslog": false,
+      "stdout": true
+    },
+    "github_com/devopsfaith/krakend-cors": {
+      "allow_origins": [
+        "http://192.168.99.100:3000",
+        "http://localhost:3000"
+      ],
+      "allow_methods": [
+        "POST",
+        "PUT",
+        "GET"
+      ],
+      "allow_headers": [
+        "Origin",
+        "Authorization",
+        "Content-Type"
+      ],
+      "expose_headers": [
+        "Content-Length"
+      ],
+      "max_age": "12h"
+    },
+    "github.com/devopsfaith/krakend-ratelimit/juju/router": {
+      "maxRate": 1000,
+      "clientMaxRate": 10,
+      "strategy": "header",
+      "key": "Authorization"
+    },
+    "github_com/devopsfaith/bloomfilter": {
+      "N": 10000000,
+      "P": 0.0000001,
+      "HashName": "optimal",
+      "TTL": 1500,
+      "TokenKeys": [
+        "jti"
+      ]
+    }
+  }
+}

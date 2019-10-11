@@ -1,0 +1,24 @@
+{
+  "main": [
+    {
+      "endpoint": "/api/v1/developers",
+      "backend": "/__debug",
+      "check_expr": "JWT.scope.matches('.*email.*')",
+      "extra_config" : {
+        "github.com/devopsfaith/krakend-cel": [{
+
+        }]
+      }
+    },
+    {
+      "endpoint": "/api/v1/developers/{id}",
+      "backend": "/__debug/{id}",
+      "check_expr": "JWT.scope.matches('.*external.*')",
+      "extra_config" : {
+        "github.com/devopsfaith/krakend-cel": [{
+
+        }]
+      }
+    }
+  ]
+}

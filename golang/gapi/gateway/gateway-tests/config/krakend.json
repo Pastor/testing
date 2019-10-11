@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "name": "API СЖС",
+  "cache_ttl": "3600s",
+  "timeout": "3s",
+  "plugin": {
+    "pattern": ".so",
+    "folder": ".plugins"
+  },
+  "port": {{ .service.port }},
+  "extra_config": {{ marshal .service.extra_config }},
+  "endpoints": [
+    {{range .endpoint.main}}
+      {
+        "endpoint": "{{ .endpoint }}",
+        "method": "GET",
+        "output_encoding": "no-op",
+        "querystring_params": ["*"],
+        "headers_to_pass": ["*"],
+        "backend": [
+        {
+          "url_pattern": "{{ .backend }}"
+        }],
+        "extra_config": {
+          {{ include "jwt_authenticator.tmpl"}},
+          "github.com/devopsfaith/krakend-cel": [{
+              "check_expr": "{{ .check_expr }}"
+           }]
+        }
+      },
+    {{end}}
+    {
+      "endpoint": "/limited-endpoint",
+      "backend": [{
+        "url_pattern": "/__debug/limited-endpoint",
+        "extra_config": {
+          {{ include "rate_limit_backend.tmpl"}}
+        }
+      }]
+    }]
+}

@@ -16,18 +16,18 @@ import (
 const (
 	BaseInternalUrl = "10.50.3.159"
 	BaseExternalUrl = "keycloak.ein.su:8080"
-	BaseUrl         = BaseInternalUrl
+	BaseUrl         = BaseExternalUrl
 	ExternalSecret  = "bf2c382e-7758-4dbc-8059-10ad1fbc1636"
 	InternalSecret  = "b7417d53-6a9a-443f-8ecd-e507caf28153"
 	ClientId        = "test"
-	ClientSecret    = InternalSecret
+	ClientSecret    = ExternalSecret
 	TokenUrl        = "http://" + BaseUrl + "/auth/realms/test/protocol/openid-connect/token"
 	UserInfoUrl     = "http://" + BaseUrl + "/auth/realms/test/protocol/openid-connect/userinfo"
 
-	LocalBaseUrl    = "http://127.0.0.1:8081"
+	LocalBaseUrl    = "http://127.0.0.1:8000/api/v1"
 	InternalBaseUrl = "http://10.50.3.172:8100/api/v1"
 	ExternalBaseUrl = "http://10.50.3.172:8100/api/v1"
-	ApiBaseUrl      = InternalBaseUrl
+	ApiBaseUrl      = LocalBaseUrl
 )
 
 type Token struct {
@@ -43,12 +43,18 @@ type AuthorizedClient struct {
 }
 
 type ApiMethod struct {
-	Method string `json:"method"`
-	Path   string `json:"path"`
+	StatusCode  int                 `json:"status_code"`
+	Description string              `json:"description"`
+	Method      string              `json:"method"`
+	Path        string              `json:"path"`
+	PathParams  []string            `json:"path_params"`
+	QueryParams map[string][]string `json:"query_params"`
 }
 
-var Methods []ApiMethod = []ApiMethod{
-	{Method: "GET", Path: "/developers"},
+var Methods = []ApiMethod{
+	{StatusCode: 404, Method: "GET", Path: "/complexes"},
+	{StatusCode: 200, Method: "GET", Path: "/developers"},
+	{StatusCode: 401, Method: "GET", Path: "/developers", PathParams: []string{"0"}},
 }
 
 func UserInfo(client *AuthorizedClient) (map[string]interface{}, error) {
@@ -101,6 +107,15 @@ func GetToken() (*Token, error) {
 	}
 }
 
+func (method ApiMethod) GetPath() string {
+	var pathParams = ""
+
+	if method.PathParams != nil {
+		pathParams = "/" + strings.Join(method.PathParams, "/")
+	}
+	return ApiBaseUrl + method.Path + pathParams
+}
+
 func main() {
 	token, err := GetToken()
 	if err != nil {
@@ -118,13 +133,14 @@ func main() {
 	client := &AuthorizedClient{Token: token, Client: http.DefaultClient}
 
 	for _, method := range Methods {
-		r, _ := http.NewRequest(method.Method, ApiBaseUrl+method.Path, nil)
+		path := method.GetPath()
+		r, _ := http.NewRequest(method.Method, path, nil)
 		resp, err := client.Do(r)
-		pref := fmt.Sprintf("%s %s", method.Method, method.Path)
+		pref := fmt.Sprintf("%s %s", method.Method, path)
 		if err != nil {
 			color.Error.Prompt(err.Error())
 		} else {
-			if resp.StatusCode == 200 {
+			if resp.StatusCode == method.StatusCode {
 				color.Debug.Prompt(fmt.Sprintf("%s - %s", pref, resp.Status))
 			} else {
 				color.Error.Prompt(fmt.Sprintf("%s - %s", pref, resp.Status))
