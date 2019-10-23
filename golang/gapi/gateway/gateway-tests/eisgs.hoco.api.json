@@ -1,0 +1,107 @@
+{
+  "oauth": {
+    "url": "http://10.50.3.159",
+    "token": "/auth/realms/external-eisgs-idm/protocol/openid-connect/token",
+    "user_info": "/auth/realms/external-eisgs-idm/protocol/openid-connect/userinfo",
+    "clients": {
+      "vtb.crm": {
+        "client_id": "app-ext-vtb.1234567891011.crm",
+        "secret": "e5024510-d14c-4db0-9040-ee9546123322"
+      },
+      "domrf.crm": {
+        "client_id": "app-ext-domrf.1234567891011.test",
+        "secret": "65f4d09e-b566-44b5-8761-a473a25d5067"
+      }
+    }
+  },
+  "gateway": {
+    "krakend": {
+      "url": "http://10.50.3.172:8100/api/v1"
+    }
+  },
+  "api": {
+    "properties": {
+      "developer_id": "356",
+      "object_id": "16799",
+      "developer_file_id": "0",
+      "object_file_id": "0"
+    },
+    "methods": {
+      "/developers/{developer_id}/files/{developer_file_id}": {
+        "scopes": [
+          "developers.read.extended"
+        ],
+        "method": "GET",
+        "required": {
+          "http_code": 200
+        }
+      },
+      "/developers/{developer_id}/files/{developer_file_id}/extended": {
+        "scopes": [
+          "developersfiles.read.extended"
+        ],
+        "method": "GET",
+        "required": {
+          "http_code": 200
+        }
+      },
+      "/developers/{developer_id}/extended": {
+        "scopes": [
+          "developers.read.extended"
+        ],
+        "method": "GET",
+        "required": {
+          "http_code": 200
+        }
+      },
+      "/construction-objects/{object_id}/files/{object_file_id}": {
+        "scopes": [
+          "objectsfiles.read.extended"
+        ],
+        "method": "GET",
+        "required": {
+          "http_code": 200
+        }
+      },
+      "/construction-objects/{object_id}/files/{object_file_id}/extended": {
+        "scopes": [
+          "objectsfiles.read.extended"
+        ],
+        "method": "GET",
+        "required": {
+          "http_code": 200
+        }
+      },
+      "/construction-objects/{object_id}/extended": {
+        "scopes": [
+          "objects.read.extended"
+        ],
+        "method": "GET",
+        "required": {
+          "http_code": 200
+        }
+      },
+      "/developers": {
+        "scopes": [],
+        "method": "GET",
+        "required": {
+          "http_code": 200
+        }
+      },
+      "/construction-objects": {
+        "scopes": [],
+        "method": "GET",
+        "required": {
+          "http_code": 200
+        }
+      },
+      "/complexes": {
+        "scopes": [],
+        "method": "GET",
+        "required": {
+          "http_code": 200
+        }
+      }
+    }
+  }
+}

@@ -23,6 +23,7 @@ func main() {
 	}
 	Evaluate("has(JWT.clientId) && JWT.scope.matches('.*access.*')", jwt)
 	Evaluate("has(JWT.clientId) && JWT.scope.matches('.*test.*')", jwt)
+	Evaluate("has(JWT.clientId) && JWT.scope.matches('.*developers.read.extended.*')", jwt)
 	Evaluate("JWT.clientId == 'test'", jwt)
 }
 
@@ -153,7 +154,7 @@ const TestingJWT string = `{
       ]
     }
   },
-  "scope": "profile test email",
+  "scope": "profile test developers.read.extended email ",
   "email_verified": false,
   "clientHost": "109.252.76.164",
   "clientId": "test",
