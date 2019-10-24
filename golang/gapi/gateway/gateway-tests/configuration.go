@@ -23,6 +23,7 @@ type ApiMethodResponse struct {
 type ApiMethod struct {
 	Scopes   []string          `json:"scopes"`
 	Method   string            `json:"method"`
+	Headers  map[string]string `json:"headers"`
 	Required ApiMethodResponse `json:"required"`
 }
 

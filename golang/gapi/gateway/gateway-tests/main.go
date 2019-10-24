@@ -51,7 +51,8 @@ func (o *OAuth) UserInfo(client *AuthorizedClient) (map[string]interface{}, erro
 
 func (o *OAuth) GetToken(clientName string, scopes []string) (*Token, error) {
 	requestScopes := strings.Join(scopes, " ") + " openid"
-	token := TokenCache[requestScopes]
+	tokenKey := clientName + "_" + requestScopes
+	token := TokenCache[tokenKey]
 	if token != nil {
 		return token, nil
 	}
@@ -78,7 +79,7 @@ func (o *OAuth) GetToken(clientName string, scopes []string) (*Token, error) {
 		if err := json.Unmarshal(bytes, &token); err != nil {
 			return nil, err
 		}
-		TokenCache[requestScopes] = &token
+		TokenCache[tokenKey] = &token
 		return &token, nil
 	} else {
 		return nil, errors.New(string(bytes))
@@ -138,8 +139,17 @@ func main() {
 				}
 			}
 			path := c.Gateway["krakend"].Url + method.GetPath(m, c.Api.Properties)
-			authClient := &AuthorizedClient{Token: token, Client: http.DefaultClient}
+			authClient := &AuthorizedClient{Token: token, Client: &http.Client{
+				CheckRedirect: func(req *http.Request, via []*http.Request) error {
+					return http.ErrUseLastResponse
+				},
+			}}
 			r, _ := http.NewRequest(method.Method, path, nil)
+			if method.Headers != nil {
+				for h := range method.Headers {
+					r.Header.Add(h, method.Headers[h])
+				}
+			}
 			resp, err := authClient.Do(r)
 			pref := fmt.Sprintf("%s %s [%s]", method.Method, path, scopes)
 			if err != nil {
