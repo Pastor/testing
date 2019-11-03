@@ -1,6 +1,7 @@
 #include <iostream>
+#include <memory>
 #include <curl/curl.h>
-#include "botan_all.h"
+//#include <botan_all.h>
 #include "tinyxml2.h"
 
 #define EB_BUFFER_SIZE 4096
@@ -112,20 +113,20 @@ static bool download_to(const char *url, const char *filename, struct elastic_bu
 int main() {
     struct elastic_buffer buf = {nullptr, 0, 0};
 //    MeinVisitor visitor;
-    std::unique_ptr<Botan::RandomNumberGenerator> rng;
+//    std::unique_ptr<Botan::RandomNumberGenerator> rng;
 
     curl_global_init(CURL_GLOBAL_ALL);
-#if defined(BOTAN_HAS_SYSTEM_RNG)
-    rng.reset(new Botan::System_RNG);
-#else
-    rng.reset(new AutoSeeded_RNG);
-#endif
-    Botan::Certificate_Store_In_SQLite store(":memory:", "", *rng);
+//#if defined(BOTAN_HAS_SYSTEM_RNG)
+//    rng = std::make_unique<Botan::System_RNG>();
+//#else
+//    rng.reset(new AutoSeeded_RNG);
+//#endif
+//    Botan::Certificate_Store_In_SQLite store(":memory:", "", *rng);
     download_to("http://e-trust.gosuslugi.ru/CA/DownloadTSL?schemaVersion=0", "download.xml", &buf);
     auto text = eb_strdup(&buf);
     tinyxml2::XMLDocument doc;
     doc.Parse((char *) buf.data, buf.data_size);
-    tinyxml2::XMLElement *root = doc.RootElement();
+    auto *root = doc.RootElement();
     if (root != nullptr) {
         auto center = root->FirstChildElement(TAG_NAME_CA);
         for (; center; center = center->NextSiblingElement(TAG_NAME_CA)) {

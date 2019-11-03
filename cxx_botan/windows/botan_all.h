@@ -38,12 +38,12 @@
 
 /*
 * This file was automatically generated running
-* 'configure.py --with-sqlite3 --amalgamation --single-amalgamation-file'
+* 'configure.py --with-sqlite3 --amalgamation --single-amalgamation-file --os=mingw --cpu=x86_64 --cc-bin=g++ --ar-command=ar'
 *
 * Target
 *  - Compiler: g++ -fstack-protector -m64 -pthread -std=c++11 -D_REENTRANT -O3
 *  - Arch: x86_64
-*  - OS: linux
+*  - OS: mingw
 */
 
 #define BOTAN_VERSION_MAJOR 2
@@ -61,32 +61,27 @@
 #define BOTAN_MP_WORD_BITS 64
 
 
-#define BOTAN_INSTALL_PREFIX R"(/usr/local)"
+#define BOTAN_INSTALL_PREFIX R"(/mingw)"
 #define BOTAN_INSTALL_HEADER_DIR R"(include/botan-2)"
-#define BOTAN_INSTALL_LIB_DIR R"(/usr/local/lib)"
-#define BOTAN_LIB_LINK "-ldl -lrt -lsqlite3"
+#define BOTAN_INSTALL_LIB_DIR R"(/mingw/lib)"
+#define BOTAN_LIB_LINK "-lsqlite3 -lws2_32"
 #define BOTAN_LINK_FLAGS "-fstack-protector -m64 -pthread"
 
-#define BOTAN_SYSTEM_CERT_BUNDLE "/etc/ssl/certs/ca-certificates.crt"
 
 #ifndef BOTAN_DLL
-  #define BOTAN_DLL __attribute__((visibility("default")))
+  #define BOTAN_DLL 
 #endif
 
 /* Target identification and feature test macros */
 
-#define BOTAN_TARGET_OS_IS_LINUX
+#define BOTAN_TARGET_OS_IS_MINGW
 
-#define BOTAN_TARGET_OS_HAS_CLOCK_GETTIME
-#define BOTAN_TARGET_OS_HAS_DEV_RANDOM
 #define BOTAN_TARGET_OS_HAS_FILESYSTEM
-#define BOTAN_TARGET_OS_HAS_GETAUXVAL
-#define BOTAN_TARGET_OS_HAS_POSIX1
-#define BOTAN_TARGET_OS_HAS_POSIX_MLOCK
-#define BOTAN_TARGET_OS_HAS_PROC_FS
-#define BOTAN_TARGET_OS_HAS_SOCKETS
+#define BOTAN_TARGET_OS_HAS_RTLGENRANDOM
 #define BOTAN_TARGET_OS_HAS_THREAD_LOCAL
 #define BOTAN_TARGET_OS_HAS_THREADS
+#define BOTAN_TARGET_OS_HAS_VIRTUAL_LOCK
+#define BOTAN_TARGET_OS_HAS_WIN32
 
 
 #define BOTAN_BUILD_COMPILER_IS_GCC
@@ -198,10 +193,9 @@
 #define BOTAN_HAS_EMSA_RAW 20131128
 #define BOTAN_HAS_EMSA_X931 20140118
 #define BOTAN_HAS_ENTROPY_SOURCE 20151120
-#define BOTAN_HAS_ENTROPY_SRC_DEV_RANDOM 20131128
-#define BOTAN_HAS_ENTROPY_SRC_PROC_WALKER 20131128
 #define BOTAN_HAS_ENTROPY_SRC_RDRAND 20131128
 #define BOTAN_HAS_ENTROPY_SRC_RDSEED 20151218
+#define BOTAN_HAS_ENTROPY_SRC_WIN32 20131128
 #define BOTAN_HAS_FFI 20180713
 #define BOTAN_HAS_FILTERS 20160415
 #define BOTAN_HAS_FPE_FE1 20131128
@@ -261,7 +255,6 @@
 #define BOTAN_HAS_PBKDF_BCRYPT 20190531
 #define BOTAN_HAS_PEM_CODEC 20131128
 #define BOTAN_HAS_PGP_S2K 20170527
-#define BOTAN_HAS_PIPE_UNIXFD_IO 20131128
 #define BOTAN_HAS_PKCS11 20160219
 #define BOTAN_HAS_PKCS5_PBES2 20141119
 #define BOTAN_HAS_PK_PADDING 20131128
@@ -16833,28 +16826,6 @@ class BOTAN_PUBLIC_API(2,0) Entropy_Sources final
    private:
       std::vector<std::unique_ptr<Entropy_Source>> m_srcs;
    };
-
-}
-
-namespace Botan {
-
-class Pipe;
-
-/**
-* Stream output operator; dumps the results from pipe's default
-* message to the output stream.
-* @param out file descriptor for an open output stream
-* @param pipe the pipe
-*/
-int BOTAN_PUBLIC_API(2,0) operator<<(int out, Pipe& pipe);
-
-/**
-* File descriptor input operator; dumps the remaining bytes of input
-* to the (assumed open) pipe message.
-* @param in file descriptor for an open input stream
-* @param pipe the pipe
-*/
-int BOTAN_PUBLIC_API(2,0) operator>>(int in, Pipe& pipe);
 
 }
 #ifdef __cplusplus
