@@ -13,9 +13,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var TokenCache = make(map[string]*Token)
+var UseCache = true
 
 type Token struct {
 	AccessToken      string `json:"access_token"`
@@ -27,6 +29,12 @@ type Token struct {
 type AuthorizedClient struct {
 	Token  *Token
 	Client *http.Client
+}
+
+type RequestTokenResult struct {
+	Time    int64
+	Success int
+	Failure int
 }
 
 func (o *OAuth) UserInfo(client *AuthorizedClient) (map[string]interface{}, error) {
@@ -53,7 +61,7 @@ func (o *OAuth) GetToken(clientName string, scopes []string) (*Token, error) {
 	requestScopes := strings.Join(scopes, " ") + " openid"
 	tokenKey := clientName + "_" + requestScopes
 	token := TokenCache[tokenKey]
-	if token != nil {
+	if token != nil && UseCache {
 		return token, nil
 	}
 	data := url.Values{}
@@ -79,7 +87,9 @@ func (o *OAuth) GetToken(clientName string, scopes []string) (*Token, error) {
 		if err := json.Unmarshal(bytes, &token); err != nil {
 			return nil, err
 		}
-		TokenCache[tokenKey] = &token
+		if UseCache {
+			TokenCache[tokenKey] = &token
+		}
 		return &token, nil
 	} else {
 		return nil, errors.New(string(bytes))
@@ -105,12 +115,18 @@ func main() {
 	var clientName string
 	var gatewayName string
 	var showScopes bool
+	var onlyTokenRequest bool
+	var counts int
+	var threads int
 	var c Configuration
 
 	flag.StringVar(&configurationFile, "conf", "eisgs.hoco.api.json", "Файл проверки GatewayAPI")
 	flag.StringVar(&clientName, "client", "vtb.crm", "Имя клиента для проверки")
 	flag.StringVar(&gatewayName, "gateway", "krakend", "Имя gatewayapi")
 	flag.BoolVar(&showScopes, "show_scopes", true, "Показывать скопы полученного токена")
+	flag.IntVar(&counts, "counts", 1, "Количество кругов запросов")
+	flag.IntVar(&threads, "threads", 1, "Количество потоков")
+	flag.BoolVar(&onlyTokenRequest, "only_token_requests", false, "Осуществлять только запрос токенов")
 	flag.Parse()
 
 	content, err := ioutil.ReadFile(configurationFile)
@@ -118,6 +134,63 @@ func main() {
 	err = json.Unmarshal(content, &c)
 	Assert(err)
 
+	if onlyTokenRequest {
+		var chanResult = make(chan RequestTokenResult)
+
+		for i := 0; i < threads; i++ {
+			go func() {
+				var start = time.Now()
+				var result = RequestTokenResult{Time: 0, Success: 0, Failure: 0}
+				for i := 0; i < counts; i++ {
+					var success, failure = RequestTokenByConfiguration(c)
+					result.Failure += failure
+					result.Success += success
+				}
+				result.Time = time.Now().Sub(start).Milliseconds()
+				chanResult <- result
+			}()
+		}
+
+		var collect = RequestTokenResult{Time: 0, Success: 0, Failure: 0}
+		for i := 0; i < threads; i++ {
+			var result = <-chanResult
+			collect.Time += result.Time
+			collect.Failure += result.Failure
+			collect.Success += result.Success
+		}
+		sumCount := int64(collect.Success + collect.Failure)
+		color.Debug.Prompt(fmt.Sprintf("%5d ms", collect.Time/sumCount))
+		color.Debug.Prompt(fmt.Sprintf("%5d rps", sumCount / (collect.Time / 1000)))
+		color.Debug.Prompt(fmt.Sprintf("%5d success", collect.Success))
+		color.Debug.Prompt(fmt.Sprintf("%5d failure", collect.Failure))
+	} else {
+		for i := 0; i < counts; i++ {
+			ProcessConfiguration(c)
+		}
+	}
+
+}
+
+func RequestTokenByConfiguration(c Configuration) (int, int) {
+	scope := make([]string, 1)
+	scope[0] = "openid"
+	UseCache = false
+	var success = 0
+	var failure = 0
+	for k := range c.OAuth.Clients {
+		token, err := c.OAuth.GetToken(k, scope)
+		if err != nil {
+			failure++
+			color.Error.Prompt(fmt.Sprintf("Ошибка получения токена %s", err.Error()))
+		} else {
+			success++
+			color.Debug.Prompt(fmt.Sprintf("Токен %s", token.AccessToken))
+		}
+	}
+	return success, failure
+}
+
+func ProcessConfiguration(c Configuration) {
 	for k := range c.OAuth.Clients {
 		color.Debug.Prompt(fmt.Sprintf("Проверка пользователя %s", k))
 		for m := range c.Api.Methods {
