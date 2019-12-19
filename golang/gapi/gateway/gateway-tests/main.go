@@ -160,7 +160,11 @@ func main() {
 		}
 		sumCount := int64(collect.Success + collect.Failure)
 		color.Debug.Prompt(fmt.Sprintf("%5d ms", collect.Time/sumCount))
-		color.Debug.Prompt(fmt.Sprintf("%5d rps", sumCount / (collect.Time / 1000)))
+		ms := collect.Time / 1000
+		if ms == 0 {
+			ms = 1;
+		}
+		color.Debug.Prompt(fmt.Sprintf("%5d rps", sumCount /ms))
 		color.Debug.Prompt(fmt.Sprintf("%5d success", collect.Success))
 		color.Debug.Prompt(fmt.Sprintf("%5d failure", collect.Failure))
 	} else {

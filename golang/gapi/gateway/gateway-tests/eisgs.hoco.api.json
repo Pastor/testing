@@ -4,6 +4,14 @@
     "token": "/auth/realms/external-eisgs-idm/protocol/openid-connect/token",
     "user_info": "/auth/realms/external-eisgs-idm/protocol/openid-connect/userinfo",
     "clients": {
+      "vtb.crm.1": {
+        "client_id": "app-ext-vtb.1234567891011.crm.1",
+        "secret": "e5024510-d14c-4db0-9040-ee9546123322"
+      },
+      "domrf.crm.1": {
+        "client_id": "app-ext-domrf.1234567891011.test",
+        "secret": "65f4d09e-b566-44b5-8761-a473a25d5067."
+      },
       "vtb.crm": {
         "client_id": "app-ext-vtb.1234567891011.crm",
         "secret": "e5024510-d14c-4db0-9040-ee9546123322"
