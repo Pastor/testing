@@ -29,13 +29,5 @@ else ()
 endif ()
 add_subdirectory(3rdparty)
 
-#configure_file(
-#        ${CMAKE_CURRENT_SOURCE_DIR}/src/main/version.rc.in
-#        ${CMAKE_CURRENT_BINARY_DIR}/version.rc
-#        @ONLY
-#)
-#configure_file(
-#        ${CMAKE_CURRENT_SOURCE_DIR}/src/main/version.h.in
-#        ${CMAKE_CURRENT_BINARY_DIR}/version.h
-#        @ONLY
-#)
+add_subdirectory(00.Utilities)
+add_subdirectory(01.Conceptions)
