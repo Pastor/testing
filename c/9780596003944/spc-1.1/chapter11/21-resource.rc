@@ -1,0 +1,21 @@
+#include <windows.h>
+
+#define SPC_MOUSE_DLGID     102
+#define SPC_PROGRESS_BARID  1000
+#define SPC_MOUSE_COLLECTID 1002
+#define SPC_MOUSE_STATIC    1003
+
+SPC_MOUSE_DLGID DIALOG DISCARDABLE  0, 0, 287, 166
+STYLE DS_MODALFRAME | DS_NOIDLEMSG | DS_CENTER | WS_POPUP | WS_VISIBLE |
+    WS_CAPTION
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL "Progress1",SPC_PROGRESS_BARID,"msctls_progress32",
+                    PBS_SMOOTH | WS_BORDER,5,125,275,14
+    LTEXT           "Please move your mouse over this dialog until the progress \
+                    bar reports 100% and the OK button becomes active.",
+                    SPC_MOUSE_STATIC,5,5,275,20
+    PUSHBUTTON      "OK",IDOK,230,145,50,14,WS_DISABLED
+    CONTROL "",SPC_MOUSE_COLLECTID,"Static",SS_LEFTNOWORDWRAP |
+                    SS_SUNKEN | WS_BORDER | WS_GROUP,5,35,275,80
+END

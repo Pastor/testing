@@ -1,0 +1,18 @@
+#include <windows.h>
+
+#define SPC_KEYBOARD_DLGID      101
+#define SPC_PROGRESS_BARID      1000
+#define SPC_KEYBOARD_STATIC     1001
+
+SPC_KEYBOARD_DLGID DIALOG DISCARDABLE  0, 0, 186, 95
+STYLE DS_MODALFRAME | DS_NOIDLEMSG | DS_CENTER | WS_POPUP | WS_VISIBLE |
+    WS_CAPTION
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL "Progress1",SPC_PROGRESS_BARID,"msctls_progress32",
+                    PBS_SMOOTH | WS_BORDER,5,40,175,14
+    LTEXT           "Please type random characters on your keyboard until the \
+                    progress bar reports 100% and the OK button becomes active.",
+                    SPC_KEYBOARD_STATIC,5,5,175,25
+    PUSHBUTTON      "OK",IDOK,130,70,50,14,WS_DISABLED
+END
