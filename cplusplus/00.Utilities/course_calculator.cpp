@@ -9,6 +9,8 @@
 
 constexpr wchar_t letter[] = L"аоуэыяеюи";
 
+#define Bit_IsSet(value, bit)   ((value) & (1 << (bit)))
+
 struct StudentInfo {
     std::wstring group;
     std::wstring number_id;
@@ -36,6 +38,26 @@ struct StudentInfo {
         }
     }
 
+    [[nodiscard]] std::wstring number_to_binary(const wchar_t symbol) const {
+        std::wstring result;
+        int n = symbol - '0';
+        result.push_back(Bit_IsSet(n, 3) ? L'1' : L'0');
+        result.push_back(Bit_IsSet(n, 2) ? L'1' : L'0');
+        result.push_back(Bit_IsSet(n, 1) ? L'1' : L'0');
+        result.push_back(Bit_IsSet(n, 0) ? L'1' : L'0');
+        return result;
+    }
+
+    [[nodiscard]] std::wstring binary_to_u16(const std::wstring &binary) const {
+        int i = binary.size() - 1;
+        unsigned short n = 0;
+        for (auto c: binary) {
+            n = n | (c == L'0' ? (0 << i) : (1 << i));
+            --i;
+        }
+        return std::to_wstring(n);
+    }
+
     [[nodiscard]] std::wstring binary_text_to_bcd(const std::wstring &text) const {
         std::wstring result;
         for (std::string::size_type i = 0; i < text.size(); i += 4) {
@@ -57,13 +79,25 @@ struct StudentInfo {
     [[nodiscard]] std::wstring bcd_to_sequence(const std::wstring &bcd) const {
         std::wstring result;
         std::wstring temp = bcd;
+        std::wstring decimal;
+        std::wstring binary_temp;
         zero_padding(temp, 4);
         for (std::string::size_type i = 0; i < temp.size(); i += 4) {
             auto part = temp.substr(i, 4);
             result += part;
             result += L' ';
+
+            binary_temp += number_to_binary(part[0]);
+            binary_temp += number_to_binary(part[1]);
+            binary_temp += number_to_binary(part[2]);
+            binary_temp += number_to_binary(part[3]);
+
+            decimal += binary_to_u16(binary_temp);
+//            decimal += L"(" + binary_temp + L")";
+            decimal += L' ';
+            binary_temp = L"";
         }
-        return result;
+        return result + L'[' + decimal + L']';
     }
 
 private:
