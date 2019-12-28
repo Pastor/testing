@@ -1,19 +1,29 @@
+#if defined(WIN32)
+#include <Windows.h>
+#endif
+#include <WinCryptEx.h>
 #include <iostream>
 #include <memory>
 #include <curl/curl.h>
 //#include <botan_all.h>
 #include "tinyxml2.h"
 
+
 #define EB_BUFFER_SIZE 4096
 static const char *const TAG_NAME_CA = "УдостоверяющийЦентр";
 
-struct elastic_buffer {
+class Certificate {
+private:
+
+};
+
+struct ElasticBuffer {
     uint8_t *data;
     size_t data_size;
     size_t allocated;
 };
 
-static void eb_write(struct elastic_buffer *buf, const char *filename) {
+static void ElasticBuffer_write(struct ElasticBuffer *buf, const char *filename) {
     FILE *fd = fopen(filename, "wb");
     if (fd != nullptr) {
         fwrite(buf->data, buf->data_size, 1, fd);
@@ -21,7 +31,7 @@ static void eb_write(struct elastic_buffer *buf, const char *filename) {
     }
 }
 
-static char *eb_strdup(struct elastic_buffer *buf) {
+static char *ElasticBuffer_strdup(struct ElasticBuffer *buf) {
     if (buf != nullptr && buf->data != nullptr) {
         char *ret = (char *) malloc(buf->data_size + 1);
         memcpy(ret, buf->data, buf->data_size);
@@ -31,7 +41,7 @@ static char *eb_strdup(struct elastic_buffer *buf) {
     return nullptr;
 }
 
-static void eb_add(struct elastic_buffer *buf, void *buffer, size_t size) {
+static void ElasticBuffer_add(struct ElasticBuffer *buf, void *buffer, size_t size) {
     if (buf != nullptr) {
         if (buf->data == nullptr) {
             buf->allocated = size + EB_BUFFER_SIZE + 1;
@@ -45,7 +55,7 @@ static void eb_add(struct elastic_buffer *buf, void *buffer, size_t size) {
     }
 }
 
-static void eb_free(struct elastic_buffer *buf) {
+static void ElasticBuffer_free(struct ElasticBuffer *buf) {
     if (buf != nullptr) {
         if (buf->data != nullptr)
             free(buf->data);
@@ -54,7 +64,7 @@ static void eb_free(struct elastic_buffer *buf) {
     }
 }
 
-static void eb_clean(struct elastic_buffer *buf) {
+static void ElasticBuffer_clean(struct ElasticBuffer *buf) {
     if (buf != nullptr) {
         memset(buf->data, 0, buf->allocated);
         buf->data_size = 0;
@@ -63,11 +73,11 @@ static void eb_clean(struct elastic_buffer *buf) {
 
 static size_t write_callback(void *buffer, size_t size, size_t nmemb, void *fd) {
     size_t real_size = size * nmemb;
-    eb_add((struct elastic_buffer *) fd, buffer, real_size);
+    ElasticBuffer_add((struct ElasticBuffer *) fd, buffer, real_size);
     return real_size;
 }
 
-static bool download(const char *url, struct elastic_buffer *buf) {
+static bool ElasticBuffer_download(struct ElasticBuffer *buf, const char *url) {
     CURL *curl;
     CURLcode result;
     bool ret = false;
@@ -84,7 +94,7 @@ static bool download(const char *url, struct elastic_buffer *buf) {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 
-        eb_clean(buf);
+        ElasticBuffer_clean(buf);
         result = curl_easy_perform(curl);
         if (result != CURLE_OK)
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(result));
@@ -94,9 +104,9 @@ static bool download(const char *url, struct elastic_buffer *buf) {
     return ret;
 }
 
-static bool download_to(const char *url, const char *filename, struct elastic_buffer *buf) {
-    if (download(url, buf)) {
-        eb_write(buf, filename);
+static bool ElasticBuffer_file(struct ElasticBuffer *buf, const char *url, const char *filename) {
+    if (ElasticBuffer_download(buf, url)) {
+        ElasticBuffer_write(buf, filename);
         return true;
     }
     return false;
@@ -111,7 +121,7 @@ static bool download_to(const char *url, const char *filename, struct elastic_bu
 //};
 
 int main() {
-    struct elastic_buffer buf = {nullptr, 0, 0};
+    struct ElasticBuffer buf = {nullptr, 0, 0};
 //    MeinVisitor visitor;
 //    std::unique_ptr<Botan::RandomNumberGenerator> rng;
 
@@ -122,8 +132,9 @@ int main() {
 //    rng.reset(new AutoSeeded_RNG);
 //#endif
 //    Botan::Certificate_Store_In_SQLite store(":memory:", "", *rng);
-    download_to("http://e-trust.gosuslugi.ru/CA/DownloadTSL?schemaVersion=0", "download.xml", &buf);
-    auto text = eb_strdup(&buf);
+    ElasticBuffer_file(&buf, "http://e-trust.gosuslugi.ru/CA/DownloadTSL?schemaVersion=0",
+                       "ElasticBuffer_download.xml");
+    auto text = ElasticBuffer_strdup(&buf);
     tinyxml2::XMLDocument doc;
     doc.Parse((char *) buf.data, buf.data_size);
     auto *root = doc.RootElement();
@@ -132,12 +143,43 @@ int main() {
         for (; center; center = center->NextSiblingElement(TAG_NAME_CA)) {
             auto name = center->FirstChildElement("КраткоеНазвание");
             auto email = center->FirstChildElement("ЭлектроннаяПочта");
+            auto compList = center->FirstChildElement("ПрограммноАппаратныеКомплексы");
+            if (compList == nullptr)
+                continue;
+            auto comp = compList->FirstChildElement("ПрограммноАппаратныйКомплекс");
+            for (; comp; comp = comp->NextSiblingElement("ПрограммноАппаратныйКомплекс")) {
+                auto keys = comp->FirstChildElement("КлючиУполномоченныхЛиц");
+                if (keys == nullptr)
+                    continue;
+                auto key = keys->FirstChildElement("Ключ");
+                for (; key; key = key->NextSiblingElement("Ключ")) {
+                    auto id = key->FirstChildElement("ИдентификаторКлюча");
+                    auto revokeList = key->FirstChildElement("АдресаСписковОтзыва");
+                    if (revokeList != nullptr) {
+                        auto revokeAddress = revokeList->FirstChildElement("Адрес");
+                        for (; revokeAddress; revokeAddress = revokeAddress->NextSiblingElement("Адрес")) {
+                            auto address = revokeAddress->GetText();
+
+                        }
+                    }
+                    auto certificates = key->FirstChildElement("Сертификаты");
+                    if (certificates != nullptr) {
+                        auto certificate = certificates->FirstChildElement("ДанныеСертификата");
+                        for (; certificate; certificate = certificate->NextSiblingElement("ДанныеСертификата")) {
+                            auto thump = certificate->FirstChildElement("Отпечаток");
+                            auto data = certificate->FirstChildElement("Данные");
+                            auto serial = certificate->FirstChildElement("СерийныйНомер");
+
+                        }
+                    }
+                }
+            }
             fprintf(stdout, "%s: %s\n", name->GetText(), email->GetText());
         }
 //        root->Accept(&visitor);
     }
     free(text);
-    eb_free(&buf);
+    ElasticBuffer_free(&buf);
     curl_global_cleanup();
     return 0;
 }
