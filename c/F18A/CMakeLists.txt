@@ -6,11 +6,13 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 find_package(Curses REQUIRED)
 
+add_definitions(-DDEBUG)
+
 include_directories(src)
 include_directories(${CURSES_INCLUDE_DIRS})
 
-add_executable(${PROJECT_NAME}_Emulator src/debugger.c src/emulator.c src/f18a.c src/opcodes.c src/terminal.c)
-target_link_libraries(${PROJECT_NAME}_Emulator ${CURSES_LIBRARIES})
+add_executable(${PROJECT_NAME}_Emulator src/f18.c src/f18_emu.c src/socketpair.c)
+target_link_libraries(${PROJECT_NAME}_Emulator ${CURSES_LIBRARIES} ws2_32)
 
 file(COPY test/add.f18 DESTINATION ${CMAKE_BINARY_DIR}/)
 file(COPY test/mult.f18 DESTINATION ${CMAKE_BINARY_DIR}/)
