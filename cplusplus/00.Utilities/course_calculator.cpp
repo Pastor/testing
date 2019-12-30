@@ -158,6 +158,9 @@ static void parse_content(const std::wstring &text, StudentInfoList &students) {
     std::wstring line;
     std::wistringstream input(text);
     while (std::getline(input, line)) {
+        line = trim(line);
+        if (line.empty())
+            continue;
         int i = 0;
         bool last_space = false;
         std::wstring temp;
