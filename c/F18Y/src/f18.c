@@ -170,12 +170,13 @@ struct Instruction {
         } bits;
     };
 };
-static char instruction_text[40];
+static char instruction_text[60];
 
 static void put_instruction(u18 v) {
     struct Instruction i = {0};
     i.base = v ^ IMASK;
-    sprintf(instruction_text, "%u%u%u%u%u.%u%u%u%u%u.%u%u%u%u%u.%u%u%u_%02x.%02x.%02x.%02x", i.bits.b00, i.bits.b01,
+    sprintf(instruction_text, "%08X, %u%u%u%u%u %u%u%u%u%u %u%u%u%u%u %u%u%u, %02X %02X %02X %02X", v, i.bits.b00,
+            i.bits.b01,
             i.bits.b02, i.bits.b03,
             i.bits.b04, i.bits.b05, i.bits.b06, i.bits.b07, i.bits.b08, i.bits.b09, i.bits.b10, i.bits.b11, i.bits.b12,
             i.bits.b13, i.bits.b14, i.bits.b15, i.bits.b16, i.bits.b17, i.parts.in00, i.parts.in01, i.parts.in02,
@@ -446,7 +447,7 @@ static u18 read_io_register(struct Node *node, u18 io_register) {
         i++;
     }
     buf[i] = '\0';
-    VERBOSE(node, "read fd=%d [%s]\n", node->fd, buf);
+    VERBOSE(node, "TXT[FD%04d]<--[%s]\n", node->fd, buf);
     ptr = buf;
     i = parse_instruction(&ptr, &instruction_x, &dest);
     switch (i) {
@@ -572,36 +573,41 @@ static u18 read_mem(struct Node *np, u18 addr) {
     if (addr <= RAM_END2) {
         value = np->ram[addr & 0x3f];
         put_instruction(value);
-        VERBOSE(np, "read ram[%x] = %x[%s]\n", addr, value, instruction_text);
+        VERBOSE(np, "RAM[%06x]<--[%s]\n", addr, instruction_text);
     } else if (addr <= ROM_END2) {
         value = np->rom[(addr - ROM_START) & 0x3f];
         put_instruction(value);
-        VERBOSE(np, "read rom[%x] = %x[%s]\n", addr, value, instruction_text);
+        VERBOSE(np, "ROM[%06x]<--[%s]\n", addr, instruction_text);
     } else {
         value = (*np->read)(np, addr);
         put_instruction(value);
-        VERBOSE(np, "read ioreg[%x] = %x[%s]\n", addr, value, instruction_text);
+        VERBOSE(np, "REG[%06x]<--[%s]\n", addr, instruction_text);
     }
     return value;
 }
 
-static void write_mem(struct Node *np, u18 addr, u18 val) {
+static void write_mem(struct Node *node, u18 addr, u18 value) {
     if (addr <= RAM_END2) {
-        np->ram[addr & 0x3f] = val;
-        VERBOSE(np, "write ram[%04x] = %02x %02x %02x %02x = %x\n",
-                addr & 0x3f,
-                (val >> 13) & 0x1f,
-                (val >> 8) & 0x1f,
-                (val >> 3) & 0x1f,
-                (val << 2) & 0x1f,
-                val);
+        node->ram[addr & 0x3f] = value;
+//        VERBOSE(node, "write ram[%04x] = %02x %02x %02x %02x = %x\n",
+//                addr & 0x3f,
+//                (value >> 13) & 0x1f,
+//                (value >> 8) & 0x1f,
+//                (value >> 3) & 0x1f,
+//                (value << 2) & 0x1f,
+//                value);
+        put_instruction(value);
+        VERBOSE(node, "RAM[%06x]-->[%s]\n", addr, instruction_text);
     } else if (addr <= ROM_END2) {
+        put_instruction(value);
+        VERBOSE(node, "ROM[%06x]-->[%s]\n", addr, instruction_text);
         fprintf(stderr, "warning: try to write in ROM area %x, value=%d\n",
-                addr, val);
-        // np->rom[(addr-ROM_START) & 0x3f] = val;
+                addr, value);
+        // node->rom[(addr-ROM_START) & 0x3f] = value;
     } else {
-        (*np->write)(np, addr, val);
-        VERBOSE(np, "write ioreg[%04x] = %x\n", addr, val);
+        put_instruction(value);
+        (*node->write)(node, addr, value);
+        VERBOSE(node, "REG[%06x]-->[%s]\n", addr, instruction_text);
     }
 }
 
@@ -624,7 +630,7 @@ void f18_emulate(struct Node *node) {
     unext:
     DUMP(node);
     ins = (II >> 15) & 0x1f;
-    TRACE(node, "execute %s\n", f18_instruction_name[ins]);
+    TRACE(node, "EXE[%06X]<--[%s]\n", ins, f18_instruction_name[ins]);
     DELAY(node);
 
     switch (ins) {
