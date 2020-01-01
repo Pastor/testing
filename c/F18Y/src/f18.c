@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 #include "f18.h"
 
 #if defined(WIN32)
@@ -12,6 +13,8 @@
 #define usleep(p) Sleep((p) / 1000)
 #else
 #include <unistd.h>
+#include <fcntl.h>
+
 #endif
 
 #define INS_RETURN     0x00   // ;
@@ -205,30 +208,30 @@ static void put_instruction(u18 v) {
 #endif
 
 // I do not think it matters in the emulator which way the posh and pop goes
-#define PUSH_ds(np, val) (np)->ds[(np)->dp++ & 0x7] = (val)
-#define POP_ds(np)      (np)->ds[--(np)->dp & 0x7]
+#define PUSH_ds(np, val) (np)->ds[(np)->ds_pointer++ & 0x7] = (val)
+#define POP_ds(np)      (np)->ds[--(np)->ds_pointer & 0x7]
 
 #define PUSH_s(np, val) do {            \
-    PUSH_ds((np), (np)->s);            \
-    (np)->s = (np)->t;                \
-    (np)->t = (val);                \
+    PUSH_ds((np), (np)->ds_s);            \
+    (np)->ds_s = (np)->ds_t;                \
+    (np)->ds_t = (val);                \
     } while(0)
 
 #define POP_s(np) do {                \
-    (np)->t = (np)->s;                \
-    (np)->s = POP_ds(np);            \
+    (np)->ds_t = (np)->ds_s;                \
+    (np)->ds_s = POP_ds(np);            \
     } while(0)
 
-#define PUSH_rs(np, val) (np)->rs[(np)->rp++ & 0x7] = (val)
-#define POP_rs(np)      (np)->rs[--(np)->rp & 0x7]
+#define PUSH_rs(np, val) (np)->rs[(np)->rs_pointer++ & 0x7] = (val)
+#define POP_rs(np)      (np)->rs[--(np)->rs_pointer & 0x7]
 
 #define PUSH_r(np, val) do {            \
-    PUSH_rs((np), (np)->r);            \
-    (np)->r = (val);                \
+    PUSH_rs((np), (np)->rs_r);            \
+    (np)->rs_r = (val);                \
     } while(0)
 
 #define POP_r(np) do {                \
-    (np)->r = POP_rs(np);            \
+    (np)->rs_r = POP_rs(np);            \
     } while(0)
 
 #define swap18(a, b) do {            \
@@ -283,10 +286,10 @@ struct {
         {"-d--u",  IOREG__D_U},
         {"-dl-",   IOREG__DL_},
         {"-dlu",   IOREG__DLU},
-        {"r---",   IOREG_R___},
-        {"r--u",   IOREG_R__U},
-        {"r-l-",   IOREG_R_L_},
-        {"r-lu",   IOREG_R_LU},
+        {"rs_r---",   IOREG_R___},
+        {"rs_r--u",   IOREG_R__U},
+        {"rs_r-l-",   IOREG_R_L_},
+        {"rs_r-lu",   IOREG_R_LU},
         {"rd--",   IOREG_RD__},
         {"rd-u",   IOREG_RD_U},
         {"rdl-",   IOREG_RDL_},
@@ -526,24 +529,24 @@ static void dump_ram(struct Node *np) {
 
 static void dump_ds(struct Node *np) {
     int i;
-    fprintf(stderr, "t=%05x,s=%05x", np->t, np->s);
+    fprintf(stderr, "ds_t=%05x,ds_s=%05x", np->ds_t, np->ds_s);
     for (i = 0; i < 8; i++)
-        fprintf(stderr, ",%05x", np->ds[(np->dp + i - 1) & 0x7]);
+        fprintf(stderr, ",%05x", np->ds[(np->ds_pointer + i - 1) & 0x7]);
     fprintf(stderr, "\n");
 }
 
 
 static void dump_rs(struct Node *np) {
     int i;
-    fprintf(stderr, "r=%05x", np->r);
+    fprintf(stderr, "rs_r=%05x", np->rs_r);
     for (i = 0; i < 8; i++)
-        fprintf(stderr, ",%05x", np->rs[(np->rp + i - 1) & 0x7]);
+        fprintf(stderr, ",%05x", np->rs[(np->rs_pointer + i - 1) & 0x7]);
     fprintf(stderr, "\n");
 }
 
 static void dump_reg(struct Node *np) {
-    fprintf(stderr, "t=%05x,a=%05x,b=%03x,c=%x,p=%x,i=%x,s=%05x,r=%05x\n",
-            np->t, np->a, np->b, np->c, np->p, np->i, np->s, np->r);
+    fprintf(stderr, "ds_t=%05x,a=%05x,b=%03x,c=%x,p=%x,i=%x,ds_s=%05x,rs_r=%05x\n",
+            np->ds_t, np->a, np->b, np->c, np->p, np->i, np->ds_s, np->rs_r);
 }
 
 // read value of P return the current value and
@@ -635,12 +638,12 @@ void f18_emulate(struct Node *node) {
 
     switch (ins) {
         case INS_RETURN:
-            node->p = node->r;
+            node->p = node->rs_r;
             POP_r(node);
             goto next;
 
         case INS_EXECUTE:
-            swap18(node->p, node->r);
+            swap18(node->p, node->rs_r);
             node->p &= MASK10;   // maske sure P is 10 bits
             goto next;
 
@@ -652,30 +655,30 @@ void f18_emulate(struct Node *node) {
             goto load_p;
 
         case INS_UNEXT:
-            if (node->r == 0)
+            if (node->rs_r == 0)
                 POP_r(node);
             else {
-                node->r--;
+                node->rs_r--;
                 goto restart;
             }
             break;
 
         case INS_NEXT:
-            if (node->r == 0)
+            if (node->rs_r == 0)
                 POP_r(node);
             else {
-                node->r--;
+                node->rs_r--;
                 goto load_p;
             }
             goto next;
 
         case INS_IF:  // if   ( x -- x ) jump if x == 0
-            if (node->t == 0)
+            if (node->ds_t == 0)
                 goto load_p;
             goto next;
 
         case INS_MINUS_IF:  // -if  ( x -- x ) jump if x >= 0
-            if (SIGNED18(node->t) >= 0)
+            if (SIGNED18(node->ds_t) >= 0)
                 goto load_p;
             goto next;
 
@@ -696,90 +699,90 @@ void f18_emulate(struct Node *node) {
             break;
 
         case INS_STORE_P:  // !p ( x -- ) store via P auto increment
-            write_mem(node, p_auto(node), node->t);
+            write_mem(node, p_auto(node), node->ds_t);
             POP_s(node);
             break;
 
         case INS_STORE_PLUS: // !+ ( x -- ) \ write T in [A] pop data stack, inc A
-            write_mem(node, a_auto(node), node->t);
+            write_mem(node, a_auto(node), node->ds_t);
             POP_s(node);
             break;
 
         case INS_STORE_B:  // !b ( x -- ) \ store T into [B], pop data stack
-            write_mem(node, node->b, node->t);
+            write_mem(node, node->b, node->ds_t);
             POP_s(node);
             break;
 
         case INS_STORE:    // ! ( x -- ) \ store T info [A], pop data stack
-            write_mem(node, node->a, node->t);
+            write_mem(node, node->a, node->ds_t);
             POP_s(node);
             break;
 
-        case INS_MULT_STEP: { // t:a * s
-            int32_t t = SIGNED18(node->t);
-            if (node->a & 1) { // sign-extend and add s and t
-                t += SIGNED18(node->s);
+        case INS_MULT_STEP: { // ds_t:a * ds_s
+            int32_t t = SIGNED18(node->ds_t);
+            if (node->a & 1) { // sign-extend and add ds_s and ds_t
+                t += SIGNED18(node->ds_s);
                 if (node->p & P9) {
                     t += node->c;
                     node->c = (t >> 18) & 1;
                 }
             }
             node->a = (node->a >> 1) | ((t & 1) << 17);
-            node->t = ((t >> 1) | (t & SIGN_BIT)) & MASK18;
+            node->ds_t = ((t >> 1) | (t & SIGN_BIT)) & MASK18;
             break;
         }
 
         case INS_TWO_STAR:
-            node->t = (node->t << 1) & MASK18;
+            node->ds_t = (node->ds_t << 1) & MASK18;
             break;
 
         case INS_TWO_SLASH:
-            node->t = (node->t >> 1) | (node->t & SIGN_BIT);
+            node->ds_t = (node->ds_t >> 1) | (node->ds_t & SIGN_BIT);
             break;
 
         case INS_NOT:
-            node->t = (~node->t) & MASK18;
+            node->ds_t = (~node->ds_t) & MASK18;
             break;
 
         case INS_PLUS: {  // + or +c  ( x y -- (x+y) ) | ( x y -- (x+y+c) )
-            int32_t t = SIGNED18(node->t) + SIGNED18(node->s);
+            int32_t t = SIGNED18(node->ds_t) + SIGNED18(node->ds_s);
             if (node->p & P9) {
                 t += node->c;
                 node->c = (t >> 18) & 1;
             }
-            node->t = t & MASK18;
-            node->s = POP_ds(node);
+            node->ds_t = t & MASK18;
+            node->ds_s = POP_ds(node);
             break;
         }
 
         case INS_AND: // ( x y -- ( x & y) )
-            node->t &= node->s;
-            node->s = POP_ds(node);
+            node->ds_t &= node->ds_s;
+            node->ds_s = POP_ds(node);
             break;
 
         case INS_OR:  // ( x y -- ( x ^ y) )  why not named XOR????
-            node->t ^= node->s;
-            node->s = POP_ds(node);
+            node->ds_t ^= node->ds_s;
+            node->ds_s = POP_ds(node);
             break;
 
         case INS_DROP:
-            node->t = node->s;
-            node->s = POP_ds(node);
+            node->ds_t = node->ds_s;
+            node->ds_s = POP_ds(node);
             break;
 
         case INS_DUP:  // ( x -- x x )
-            PUSH_ds(node, node->s);
-            node->s = node->t;
+            PUSH_ds(node, node->ds_s);
+            node->ds_s = node->ds_t;
             break;
 
         case INS_POP:  // push R onto data stack and pop return stack
-            PUSH_s(node, node->r);
-            node->r = POP_rs(node);
+            PUSH_s(node, node->rs_r);
+            node->rs_r = POP_rs(node);
             break;
 
         case INS_OVER:  // ( x y -- x y x )
-            PUSH_ds(node, node->s);
-            swap18(node->t, node->s);
+            PUSH_ds(node, node->ds_s);
+            swap18(node->ds_t, node->ds_s);
             break;
 
         case INS_A:  // ( -- A )  push? A onto data stack
@@ -790,17 +793,17 @@ void f18_emulate(struct Node *node) {
             break;
 
         case INS_PUSH:  // push T onto return stack and pop data stack
-            PUSH_r(node, node->t);
+            PUSH_r(node, node->ds_t);
             POP_s(node);
             break;
 
         case INS_B_STORE:  // b! ( x -- ) store into B
-            node->b = node->t;
+            node->b = node->ds_t;
             POP_s(node);
             break;
 
         case INS_A_STORE:  // a! ( x -- ) store into A
-            node->a = node->t;
+            node->a = node->ds_t;
             POP_s(node);
             break;
     }

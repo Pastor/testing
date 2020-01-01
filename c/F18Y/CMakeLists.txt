@@ -11,3 +11,4 @@ include_directories(${CURSES_INCLUDE_DIRS})
 add_executable(${PROJECT_NAME}_Emulator src/f18.c src/f18_emu.c)
 
 file(COPY test/add.f18 DESTINATION ${CMAKE_BINARY_DIR}/)
+file(COPY test/message.f18 DESTINATION ${CMAKE_BINARY_DIR}/)

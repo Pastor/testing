@@ -48,7 +48,7 @@ size:
 	@$(OBJCOPY) -I ihex --output-target=binary $(TARGET) $(TARGET).bin
 	@echo "----------"
 	@echo "Image size:"
-	@stat -L -c %s $(TARGET).bin
+#	@stat -L -c %s $(TARGET).bin
 
 flash: $(TARGET)
 	stm8flash -c stlinkv2 -p $(MCU) -w $(TARGET)

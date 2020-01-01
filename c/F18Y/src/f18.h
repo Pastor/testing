@@ -18,15 +18,16 @@ struct Node {
 
     unsigned int delay;       // delay between instructions
     u18 flags;         // flags,debug,trace...
+    int fd;
 
-    u18 t;            // top of data stack
-    u18 s;            // second of data stack
+    u18 ds_t;            // top of data stack
+    u18 ds_s;            // second of data stack
     u18 ds[8];        // data stack
-    u3 dp;           // data stack pointer
+    u3 ds_pointer;           // data stack pointer
 
-    u18 r;            // return top of return stack
+    u18 rs_r;            // return top of return stack
     u18 rs[8];        // return stack
-    u3 rp;           // return stack pointer
+    u3 rs_pointer;           // return stack pointer
 
     u18 i;           // instruction register
     u10 p;           // program counter
@@ -34,11 +35,8 @@ struct Node {
     u9 b;
     u8 c;           // carry flag
 
-    u18 (*read)(struct Node *node, u18 reg);
-
+    u18  (*read )(struct Node *node, u18 reg);
     void (*write)(struct Node *node, u18 reg, u18 value);
-
-    int fd;
 };
 
 void f18_emulate(struct Node *node);
