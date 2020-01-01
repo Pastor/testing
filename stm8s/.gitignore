@@ -9,3 +9,5 @@
 *.bin
 *.lk
 *.o
+.idea
+.build_stm8s
