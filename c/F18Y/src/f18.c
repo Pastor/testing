@@ -195,10 +195,10 @@ static void put_instruction(u18 v) {
 #define TRACE(np, fmt, ...) do {                \
     if ((np)->flags & FLAG_TRACE)                \
         fprintf(stderr, fmt, __VA_ARGS__);        \
-        fflush(stderr);        \
+        fflush(stderr);              \
     } while(0)
-#define DELAY(np) do {                \
-    if ((np)->delay)            \
+#define DELAY(np) do {               \
+    if ((np)->delay)                \
         usleep((np)->delay);        \
     } while(0)
 #else
@@ -211,32 +211,32 @@ static void put_instruction(u18 v) {
 #define PUSH_ds(np, val) (np)->ds[(np)->ds_pointer++ & 0x7] = (val)
 #define POP_ds(np)      (np)->ds[--(np)->ds_pointer & 0x7]
 
-#define PUSH_s(np, val) do {            \
-    PUSH_ds((np), (np)->ds_s);            \
-    (np)->ds_s = (np)->ds_t;                \
-    (np)->ds_t = (val);                \
+#define PUSH_s(np, val) do {          \
+    PUSH_ds((np), (np)->ds_s);       \
+    (np)->ds_s = (np)->ds_t;         \
+    (np)->ds_t = (val);              \
     } while(0)
 
 #define POP_s(np) do {                \
-    (np)->ds_t = (np)->ds_s;                \
-    (np)->ds_s = POP_ds(np);            \
+    (np)->ds_t = (np)->ds_s;         \
+    (np)->ds_s = POP_ds(np);         \
     } while(0)
 
 #define PUSH_rs(np, val) (np)->rs[(np)->rs_pointer++ & 0x7] = (val)
-#define POP_rs(np)      (np)->rs[--(np)->rs_pointer & 0x7]
+#define POP_rs(np)       (np)->rs[--(np)->rs_pointer & 0x7]
 
-#define PUSH_r(np, val) do {            \
-    PUSH_rs((np), (np)->rs_r);            \
-    (np)->rs_r = (val);                \
+#define PUSH_r(np, val) do {          \
+    PUSH_rs((np), (np)->rs_r);       \
+    (np)->rs_r = (val);              \
     } while(0)
 
 #define POP_r(np) do {                \
-    (np)->rs_r = POP_rs(np);            \
+    (np)->rs_r = POP_rs(np);         \
     } while(0)
 
-#define swap18(a, b) do {            \
+#define swap18(a, b) do {             \
     u18 _swap18_t1 = (a);            \
-    (a) = (b);                    \
+    (a) = (b);                       \
     (b) = _swap18_t1;                \
     } while(0)
 
@@ -286,10 +286,10 @@ struct {
         {"-d--u",  IOREG__D_U},
         {"-dl-",   IOREG__DL_},
         {"-dlu",   IOREG__DLU},
-        {"rs_r---",   IOREG_R___},
-        {"rs_r--u",   IOREG_R__U},
-        {"rs_r-l-",   IOREG_R_L_},
-        {"rs_r-lu",   IOREG_R_LU},
+        {"r---",   IOREG_R___},
+        {"r--u",   IOREG_R__U},
+        {"r-l-",   IOREG_R_L_},
+        {"r-lu",   IOREG_R_LU},
         {"rd--",   IOREG_RD__},
         {"rd-u",   IOREG_RD_U},
         {"rdl-",   IOREG_RDL_},
@@ -552,16 +552,17 @@ static void dump_reg(struct Node *np) {
 // read value of P return the current value and
 // perform auto increment if needed.
 
-static u9 p_auto(struct Node *node) {
+static inline u9 p_auto(struct Node *node) {
     u9 p = node->p & MASK9;  // strip P(9)
-    if ((p >= RAM_START) && (p <= RAM_END2))
+    if ((p >= RAM_START) && (p <= RAM_END2)) {
         node->p = ((p + 1) & 0x7f) | (node->p & P9);
-    else if ((p >= ROM_START) && (p <= ROM_END2))
+    } else if ((p >= ROM_START) && (p <= ROM_END2)) {
         node->p = (ROM_START + (((p - ROM_START) + 1) & 0x7f)) | (node->p & P9);
+    }
     return p;
 }
 
-static u9 a_auto(struct Node *np) {
+static inline u9 a_auto(struct Node *np) {
     u9 a = np->a & MASK9;
 
     if ((a >= RAM_START) && (a <= RAM_END2))
