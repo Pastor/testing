@@ -26,6 +26,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stm32f1xx_hal_i2c.h>
+#include <stdio.h>
+#include <stdarg.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,7 +38,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define EEPROM_DEVICE_ADDRESS      0x50
-#define EEPROM_DATA_START_ADDRESS  0x80
+#define EEPROM_DATA_START_ADDRESS  0x00
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -77,13 +79,16 @@ enum State {
     READING_COMPLETE
 };
 
-static void println(char *fmt) {
-    HAL_UART_Transmit(&huart1, (uint8_t *) fmt, strlen(fmt), 10000);
-    HAL_UART_Transmit(&huart1, (uint8_t *) "\r\n", 2, 10000);
-}
+static void println(char *fmt, ...) {
+    static char buffer[256];
+    int ret;
+    va_list args;
 
-static void printc(char c) {
-    HAL_UART_Transmit(&huart1, (uint8_t *) &c, 1, 10000);
+    va_start(args, fmt);
+    ret = vsnprintf(buffer, sizeof(buffer), fmt, args);
+    HAL_UART_Transmit(&huart1, (uint8_t *) buffer, ret, 10000);
+    HAL_UART_Transmit(&huart1, (uint8_t *) "\r\n", 2, 10000);
+    va_end(args);
 }
 
 HAL_StatusTypeDef Read_From_24LCxx(I2C_HandleTypeDef *hi2c, uint16_t DevAddress,
@@ -143,6 +148,7 @@ HAL_StatusTypeDef Write_To_24LCxx(I2C_HandleTypeDef *hi2c, uint16_t DevAddress,
 int main(void) {
     /* USER CODE BEGIN 1 */
     enum State state = READING_READY;
+    HAL_StatusTypeDef status;
     uint16_t reading_address = 0;
     uint16_t device_address = 0;
     /* USER CODE END 1 */
@@ -175,13 +181,34 @@ int main(void) {
         for (int i = 8; i < 127; ++i) {
             if (HAL_OK == HAL_I2C_IsDeviceReady(&hi2c1, i, 1, 0x10000)) {
                 device_address = i;
-                break;
+                println("[EEPROM] Found 0x%X device", device_address);
             }
         }
     }
     if (0 == device_address) {
         println("[EEPROM] Not found. Set default address");
         device_address = EEPROM_DEVICE_ADDRESS;
+    } else {
+        status = Write_To_24LCxx(&hi2c1, device_address, 0x01F0, (uint8_t *) "DATA", 4);
+        switch (status) {
+            case HAL_ERROR:
+                println("[EEPROM] Write ERROR");
+                break;
+            case HAL_BUSY:
+                println("[EEPROM] Write BUSY");
+                break;
+            case HAL_TIMEOUT:
+                println("[EEPROM] Write TIMEOUT");
+                break;
+            case HAL_OK: {
+                while (HAL_I2C_IsDeviceReady(&hi2c1, device_address, 3, 0x1000000) != HAL_OK);
+                println("[EEPROM] Write OK");
+                break;
+            }
+            default:
+                println("[EEPROM] Unknown state");
+                break;
+        }
     }
 
 
@@ -198,8 +225,9 @@ int main(void) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
     while (1) {
-        uint8_t character = EEPROM_DATA_START_ADDRESS;
+        uint8_t buf[64];
         /* USER CODE END WHILE */
+        memset(buf, 0, sizeof(buf));
         switch (state) {
             case READING_READY: {
                 println("[EEPROM] Start reading");
@@ -213,33 +241,36 @@ int main(void) {
                 break;
             }
             case READING_MEMORY: {
-                HAL_StatusTypeDef read_status;
-//                read_status = HAL_I2C_Mem_Read_IT(&hi2c1, EEPROM_DEVICE_ADDRESS, reading_address,
+
+//                status = HAL_I2C_Mem_Read_IT(&hi2c1, EEPROM_DEVICE_ADDRESS, reading_address,
 //                                                  I2C_MEMADD_SIZE_16BIT,
-//                                                  (uint8_t *) &character, 1);
-                read_status = Read_From_24LCxx(&hi2c1, device_address, reading_address, (uint8_t *) &character,
-                                               1);
-                if (read_status != HAL_OK) {
-                    switch (read_status) {
+//                                                  (uint8_t *) buf, 1);
+                status = Read_From_24LCxx(&hi2c1, device_address, reading_address, (uint8_t *) buf, sizeof(buf));
+                if (status != HAL_OK) {
+                    switch (status) {
                         case HAL_ERROR:
-                            println("[EEPROM] Reading ERROR");
+                            println("[EEPROM] Reading(0x%04X) ERROR", reading_address);
                             break;
                         case HAL_BUSY:
-                            println("[EEPROM] Reading BUSY");
+                            println("[EEPROM] Reading(0x%04X) BUSY", reading_address);
                             break;
                         case HAL_TIMEOUT:
-                            println("[EEPROM] Reading TIMEOUT");
+                            println("[EEPROM] Reading(0x%04X) TIMEOUT", reading_address);
                             break;
                         default:
                             println("[EEPROM] Unknown state");
                             break;
                     }
+                    reading_address = EEPROM_DATA_START_ADDRESS;
                 } else {
-                    if (character == 0x00) {
+                    for (size_t i = 0; i < sizeof(buf); ++i) {
+                        println("[EEPROM] Read(0x%04X) 0x%02X(%c)", reading_address + i, buf[i], buf[i]);
+                    }
+
+                    if (reading_address >= 0xFFFF) {
                         state = READING_COMPLETE;
                     } else {
-                        printc(character);
-                        reading_address++;
+                        reading_address += sizeof(buf);
                     }
                 }
                 break;
@@ -276,8 +307,7 @@ void SystemClock_Config(void) {
     }
     /** Initializes the CPU, AHB and APB busses clocks
     */
-    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-                                  | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
     RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
     RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
