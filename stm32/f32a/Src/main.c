@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 #include <stdlib.h>
+#include <stm32f1xx_hal_i2c.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -143,7 +144,7 @@ int main(void) {
     /* USER CODE BEGIN 1 */
     enum State state = READING_READY;
     uint16_t reading_address = 0;
-    uint16_t device_address = EEPROM_DEVICE_ADDRESS;
+    uint16_t device_address = 0;
     /* USER CODE END 1 */
 
 
@@ -169,6 +170,22 @@ int main(void) {
     MX_SPI1_Init();
     MX_USART1_UART_Init();
     /* USER CODE BEGIN 2 */
+    {
+        /* Search address*/
+        for (int i = 8; i < 127; ++i) {
+            if (HAL_OK == HAL_I2C_IsDeviceReady(&hi2c1, i, 1, 0x10000)) {
+                device_address = i;
+                break;
+            }
+        }
+    }
+    if (0 == device_address) {
+        println("[EEPROM] Not found. Set default address");
+        device_address = EEPROM_DEVICE_ADDRESS;
+    }
+
+
+
 //    HAL_I2C_Mem_Write(&hi2c1, EEPROM_DEVICE_ADDRESS, 0x1AAA, I2C_MEMADD_SIZE_16BIT, (uint8_t *) wmsg,
 //                      strlen(wmsg) + 1, HAL_MAX_DELAY);
 //    while (HAL_I2C_IsDeviceReady(&hi2c1, EEPROM_DEVICE_ADDRESS, 1, HAL_MAX_DELAY) != HAL_OK);
@@ -178,6 +195,8 @@ int main(void) {
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
     while (1) {
         uint8_t character = EEPROM_DATA_START_ADDRESS;
         /* USER CODE END WHILE */
@@ -211,10 +230,10 @@ int main(void) {
                         case HAL_TIMEOUT:
                             println("[EEPROM] Reading TIMEOUT");
                             break;
+                        default:
+                            println("[EEPROM] Unknown state");
+                            break;
                     }
-                    device_address++;
-                    if (device_address > 0x57)
-                        device_address = EEPROM_DEVICE_ADDRESS;
                 } else {
                     if (character == 0x00) {
                         state = READING_COMPLETE;
@@ -225,6 +244,8 @@ int main(void) {
                 }
                 break;
             }
+            default:
+                break;
         }
 
 
@@ -232,6 +253,7 @@ int main(void) {
         for (int i = 0; i < 0x10000; i++);
         /* USER CODE BEGIN 3 */
     }
+#pragma clang diagnostic pop
     /* USER CODE END 3 */
 }
 
