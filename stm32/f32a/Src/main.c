@@ -28,6 +28,7 @@
 #include <stm32f1xx_hal_i2c.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,7 +38,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define EEPROM_DEVICE_ADDRESS      0x36
+#define EEPROM_DEVICE_ADDRESS      0x50
 #define EEPROM_DATA_START_ADDRESS  0x00
 /* USER CODE END PD */
 
@@ -205,9 +206,11 @@ int main(void) {
     device_address = EEPROM_DEVICE_ADDRESS;
 #endif
     if (HAL_OK != HAL_I2C_IsDeviceReady(&hi2c1, device_address, 3, 0x10000)) {
-        println("[EEPROM] Device 0x%04X not found", device_address);
+        println("[EEPROM] Device 0x%04X not detected", device_address);
         device_address = EEPROM_DEVICE_ADDRESS;
-    } else {
+    }
+#if 0
+    else {
         status = HAL_I2C_Mem_Write(&hi2c1, DEVICE_ADDRESS(device_address), 0x001F, I2C_MEMADD_SIZE_16BIT,
                                    (uint8_t *) "DATA", 4, HAL_MAX_DELAY);
 //        status = Write_To_24LCxx(&hi2c1, DEVICE_ADDRESS(device_address), 0x001F, (uint8_t *) "DATA", 4);
@@ -222,6 +225,7 @@ int main(void) {
                 break;
         }
     }
+#endif
 
     /* USER CODE END 2 */
 
@@ -230,7 +234,7 @@ int main(void) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
     while (1) {
-        uint8_t buf[1];
+        uint8_t buf[64];
         /* USER CODE END WHILE */
         switch (state) {
             case READING_READY: {
@@ -239,7 +243,8 @@ int main(void) {
                 break;
             }
             case READING_COMPLETE: {
-                println("[EEPROM] Complete reading");
+                println("[EEPROM] Complete reading. Wait some times.");
+                for (int i = 0; i < 0x1000000; i++);
                 reading_address = EEPROM_DATA_START_ADDRESS;
                 state = READING_READY;
                 break;
@@ -256,17 +261,29 @@ int main(void) {
                     while (HAL_I2C_IsDeviceReady(&hi2c1, device_address, 3, 0x1000000) != HAL_OK);
                     for (int i = 0; i < 0x100000; i++);
                 } else {
-                    println("[EEPROM]: ");
+                    bool has_zero = false;
                     for (size_t i = 0; i < sizeof(buf); ++i) {
-                        if (i % 8 == 0) {
+
+#if 0
+                        if ((reading_address + i) % 16 == 0) {
                             println("");
                             print("0x%04X| ", reading_address + i);
                         }
                         print("0x%02X(%c) ", buf[i], buf[i]);
+#else
+                        if (buf[i] == '\n') {
+                            println("");
+                        } else {
+                            print("%c", buf[i]);
+                        }
+#endif
+                        if (buf[i] == 0x00) {
+                            has_zero = true;
+                        }
                     }
-                    println("");
-                    if (reading_address >= 0xFFFF) {
+                    if (reading_address >= 0xFFFF || has_zero) {
                         state = READING_COMPLETE;
+                        println("");
                     } else {
                         reading_address += sizeof(buf);
                     }
