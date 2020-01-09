@@ -37,7 +37,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define EEPROM_DEVICE_ADDRESS      0x50
+#define EEPROM_DEVICE_ADDRESS      0x36
 #define EEPROM_DATA_START_ADDRESS  0x00
 /* USER CODE END PD */
 
@@ -72,6 +72,8 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
+void HAL_I2C_Print_Error(char *mode, HAL_StatusTypeDef status, uint16_t reading_address);
+
 /* USER CODE BEGIN 0 */
 enum State {
     READING_READY,
@@ -79,14 +81,26 @@ enum State {
     READING_COMPLETE
 };
 
-static void println(char *fmt, ...) {
-    static char buffer[256];
+static char print_buffer[256];
+
+static void print(char *fmt, ...) {
+
     int ret;
     va_list args;
 
     va_start(args, fmt);
-    ret = vsnprintf(buffer, sizeof(buffer), fmt, args);
-    HAL_UART_Transmit(&huart1, (uint8_t *) buffer, ret, 10000);
+    ret = vsnprintf(print_buffer, sizeof(print_buffer), fmt, args);
+    HAL_UART_Transmit(&huart1, (uint8_t *) print_buffer, ret, 10000);
+    va_end(args);
+}
+
+static void println(char *fmt, ...) {
+    int ret;
+    va_list args;
+
+    va_start(args, fmt);
+    ret = vsnprintf(print_buffer, sizeof(print_buffer), fmt, args);
+    HAL_UART_Transmit(&huart1, (uint8_t *) print_buffer, ret, 10000);
     HAL_UART_Transmit(&huart1, (uint8_t *) "\r\n", 2, 10000);
     va_end(args);
 }
@@ -139,6 +153,8 @@ HAL_StatusTypeDef Write_To_24LCxx(I2C_HandleTypeDef *hi2c, uint16_t DevAddress,
     return HAL_OK;
 }
 
+#define DEVICE_ADDRESS(da) ((da) << 1)
+//#define DEVICE_ADDRESS(da) ((da))
 /* USER CODE END 0 */
 
 /**
@@ -150,7 +166,7 @@ int main(void) {
     enum State state = READING_READY;
     HAL_StatusTypeDef status;
     uint16_t reading_address = 0;
-    uint16_t device_address = 0;
+    uint16_t device_address = EEPROM_DEVICE_ADDRESS;
     /* USER CODE END 1 */
 
 
@@ -176,48 +192,37 @@ int main(void) {
     MX_SPI1_Init();
     MX_USART1_UART_Init();
     /* USER CODE BEGIN 2 */
-    {
-        /* Search address*/
-        for (int i = 8; i < 127; ++i) {
-            if (HAL_OK == HAL_I2C_IsDeviceReady(&hi2c1, i, 1, 0x10000)) {
-                device_address = i;
-                println("[EEPROM] Found 0x%X device", device_address);
-            }
+#if 1
+    /* Search address*/
+    for (int i = 8; i < 127; ++i) {
+        if (HAL_OK == HAL_I2C_IsDeviceReady(&hi2c1, i, 1, 0x10000)) {
+            device_address = i;
+            println("[EEPROM] Found 0x%X device", device_address);
+            break;
         }
     }
-    if (0 == device_address) {
-        println("[EEPROM] Not found. Set default address");
+#else
+    device_address = EEPROM_DEVICE_ADDRESS;
+#endif
+    if (HAL_OK != HAL_I2C_IsDeviceReady(&hi2c1, device_address, 3, 0x10000)) {
+        println("[EEPROM] Device 0x%04X not found", device_address);
         device_address = EEPROM_DEVICE_ADDRESS;
     } else {
-        status = Write_To_24LCxx(&hi2c1, device_address, 0x01F0, (uint8_t *) "DATA", 4);
+        status = HAL_I2C_Mem_Write(&hi2c1, DEVICE_ADDRESS(device_address), 0x001F, I2C_MEMADD_SIZE_16BIT,
+                                   (uint8_t *) "DATA", 4, HAL_MAX_DELAY);
+//        status = Write_To_24LCxx(&hi2c1, DEVICE_ADDRESS(device_address), 0x001F, (uint8_t *) "DATA", 4);
         switch (status) {
-            case HAL_ERROR:
-                println("[EEPROM] Write ERROR");
-                break;
-            case HAL_BUSY:
-                println("[EEPROM] Write BUSY");
-                break;
-            case HAL_TIMEOUT:
-                println("[EEPROM] Write TIMEOUT");
-                break;
             case HAL_OK: {
                 while (HAL_I2C_IsDeviceReady(&hi2c1, device_address, 3, 0x1000000) != HAL_OK);
                 println("[EEPROM] Write OK");
                 break;
             }
             default:
-                println("[EEPROM] Unknown state");
+                HAL_I2C_Print_Error("Writing", status, 0x001F);
                 break;
         }
     }
 
-
-
-//    HAL_I2C_Mem_Write(&hi2c1, EEPROM_DEVICE_ADDRESS, 0x1AAA, I2C_MEMADD_SIZE_16BIT, (uint8_t *) wmsg,
-//                      strlen(wmsg) + 1, HAL_MAX_DELAY);
-//    while (HAL_I2C_IsDeviceReady(&hi2c1, EEPROM_DEVICE_ADDRESS, 1, HAL_MAX_DELAY) != HAL_OK);
-//    HAL_I2C_Mem_Read(&hi2c1, EEPROM_DEVICE_ADDRESS, 0x1AAA, I2C_MEMADD_SIZE_16BIT, (uint8_t *) rmsg,
-//                     strlen(wmsg) + 1, HAL_MAX_DELAY);
     /* USER CODE END 2 */
 
     /* Infinite loop */
@@ -225,9 +230,8 @@ int main(void) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
     while (1) {
-        uint8_t buf[64];
+        uint8_t buf[1];
         /* USER CODE END WHILE */
-        memset(buf, 0, sizeof(buf));
         switch (state) {
             case READING_READY: {
                 println("[EEPROM] Start reading");
@@ -241,32 +245,26 @@ int main(void) {
                 break;
             }
             case READING_MEMORY: {
-
-//                status = HAL_I2C_Mem_Read_IT(&hi2c1, EEPROM_DEVICE_ADDRESS, reading_address,
-//                                                  I2C_MEMADD_SIZE_16BIT,
-//                                                  (uint8_t *) buf, 1);
-                status = Read_From_24LCxx(&hi2c1, device_address, reading_address, (uint8_t *) buf, sizeof(buf));
+                memset(buf, 0, sizeof(buf));
+                status = HAL_I2C_Mem_Read(&hi2c1, DEVICE_ADDRESS(device_address), reading_address,
+                                          I2C_MEMADD_SIZE_16BIT, (uint8_t *) buf, sizeof(buf), HAL_MAX_DELAY);
+//                status = Read_From_24LCxx(&hi2c1, DEVICE_ADDRESS(device_address), reading_address, (uint8_t *) buf, sizeof(buf));
                 if (status != HAL_OK) {
-                    switch (status) {
-                        case HAL_ERROR:
-                            println("[EEPROM] Reading(0x%04X) ERROR", reading_address);
-                            break;
-                        case HAL_BUSY:
-                            println("[EEPROM] Reading(0x%04X) BUSY", reading_address);
-                            break;
-                        case HAL_TIMEOUT:
-                            println("[EEPROM] Reading(0x%04X) TIMEOUT", reading_address);
-                            break;
-                        default:
-                            println("[EEPROM] Unknown state");
-                            break;
-                    }
+                    HAL_I2C_Print_Error("Reading", status, reading_address);
                     reading_address = EEPROM_DATA_START_ADDRESS;
+                    state = READING_READY;
+                    while (HAL_I2C_IsDeviceReady(&hi2c1, device_address, 3, 0x1000000) != HAL_OK);
+                    for (int i = 0; i < 0x100000; i++);
                 } else {
+                    println("[EEPROM]: ");
                     for (size_t i = 0; i < sizeof(buf); ++i) {
-                        println("[EEPROM] Read(0x%04X) 0x%02X(%c)", reading_address + i, buf[i], buf[i]);
+                        if (i % 8 == 0) {
+                            println("");
+                            print("0x%04X| ", reading_address + i);
+                        }
+                        print("0x%02X(%c) ", buf[i], buf[i]);
                     }
-
+                    println("");
                     if (reading_address >= 0xFFFF) {
                         state = READING_COMPLETE;
                     } else {
@@ -286,6 +284,24 @@ int main(void) {
     }
 #pragma clang diagnostic pop
     /* USER CODE END 3 */
+}
+
+void HAL_I2C_Print_Error(char *mode, HAL_StatusTypeDef status, uint16_t reading_address) {
+    uint32_t error = HAL_I2C_GetError(&hi2c1);
+    switch (status) {
+        case HAL_ERROR:
+            println("[EEPROM] %s(0x%04X) ERROR. Code: 0x%08X", mode, reading_address, error);
+            break;
+        case HAL_BUSY:
+            println("[EEPROM] %s(0x%04X) BUSY. Code: 0x%08X", mode, reading_address, error);
+            break;
+        case HAL_TIMEOUT:
+            println("[EEPROM] %s(0x%04X) TIMEOUT. Code: 0x%08X", mode, reading_address, error);
+            break;
+        default:
+            println("[EEPROM] %s(0x%04X) UNKNOWN. Code: 0x%08X", mode, reading_address, error);
+            break;
+    }
 }
 
 /**
