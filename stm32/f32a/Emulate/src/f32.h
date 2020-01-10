@@ -29,6 +29,67 @@
 #define IOREG_RDL_    0x1B5
 #define IOREG_RDLU    0x1A5
 
+#define P9          0x200    // P9 bit
+#define SIGN_BIT    0x20000  // 18 bit sign bit
+#define MASK3       0x7
+#define MASK8       0xff
+#define MASK9       0x1ff
+#define MASK10      0x3ff
+#define MASK18      0x3ffff
+#define MASK19      0x7ffff
+#define IMASK       0x15555  // exeucte/compiler mask
+
+#define INS_RETURN     0x00   // ;
+#define INS_EXECUTE    0x01   // ex
+#define INS_PJUMP      0x02   // jump <10-bit>
+#define INS_PCALL      0x03   // call <10-bit>
+#define INS_UNEXT      0x04   // micronext
+#define INS_NEXT       0x05   // next <10-bit>
+#define INS_IF         0x06   //  if  <10-bit>
+#define INS_MINUS_IF   0x07   // -if  <10-bit>
+#define INS_FETCH_P    0x08   // @p
+#define INS_FETCH_PLUS 0x09   // @+
+#define INS_FETCH_B    0x0a   // @b
+#define INS_FETCH      0x0b   // @
+#define INS_STORE_P    0x0c   // !p
+#define INS_STORE_PLUS 0x0d   // !+
+#define INS_STORE_B    0x0e   // !b
+#define INS_STORE      0x0f   // !
+#define INS_MULT_STEP  0x10   // +*
+#define INS_TWO_STAR   0x11   // 2*
+#define INS_TWO_SLASH  0x12   // 2/
+#define INS_NOT        0x13   // -
+#define INS_PLUS       0x14   // +
+#define INS_AND        0x15   // and
+#define INS_OR         0x16   // or 	ALU 	1.5 	(exclusive or)
+#define INS_DROP       0x17   // drop ALU 	1.5
+#define INS_DUP        0x18   // dup 	ALU 	1.5
+#define INS_POP        0x19   // pop 	ALU 	1.5
+#define INS_OVER       0x1a   // over 	ALU 	1.5
+#define INS_A          0x1b   // a 	ALU 	1.5 	(A to T)
+#define INS_NOP        0x1c   // . 	ALU 	1.5 	“nop”
+#define INS_PUSH       0x1d   // push 	ALU 	1.5 	(from T to R)
+#define INS_B_STORE    0x1e   // b! 	ALU 	1.5 	“b-store” (store into B)
+#define INS_A_STORE    0x1f   // a! 	ALU 	1.5 	“a-store” (store into A)
+
+#define SIGNED18(v)  (((int32_t)((v)<<14))>>14)
+
+#define FLAG_VERBOSE      0x00001
+#define FLAG_TRACE        0x00002
+#define FLAG_TERMINATE    0x00004
+#define FLAG_DUMP_REG     0x00010
+#define FLAG_DUMP_RAM     0x00020
+#define FLAG_DUMP_RS      0x00040
+#define FLAG_DUMP_DS      0x00080
+#define FLAG_RD_BIN_RIGHT 0x00800
+#define FLAG_RD_BIN_DOWN  0x00400
+#define FLAG_RD_BIN_LEFT  0x00200
+#define FLAG_RD_BIN_UP    0x00100
+#define FLAG_WR_BIN_RIGHT 0x08000
+#define FLAG_WR_BIN_LEFT  0x04000
+#define FLAG_WR_BIN_DOWN  0x02000
+#define FLAG_WR_BIN_UP    0x01000
+
 typedef uint32_t u18;
 typedef uint16_t u9;
 typedef uint16_t u10;
@@ -64,5 +125,36 @@ struct Node {
 };
 
 void f18_emulate(struct Node *node);
+
+
+#define TOKEN_ERROR     -1
+#define TOKEN_EMPTY     0
+#define TOKEN_MNEMONIC1 1
+#define TOKEN_MNEMONIC2 2
+#define TOKEN_VALUE     3
+
+int parse_instruction(u8 **p_pointer, u18 *p_instruction, u18 *p_destination);
+
+
+#ifdef DEBUG
+#define VERBOSE(np, fmt, ...) do {            \
+    if ((np)->flags & FLAG_VERBOSE)            \
+        print(fmt, __VA_ARGS__);        \
+    } while(0)
+#define TRACE(np, fmt, ...) do {                \
+    if ((np)->flags & FLAG_TRACE)                \
+        print(fmt, __VA_ARGS__);        \
+    } while(0)
+#define DELAY(np) do {               \
+    if ((np)->delay)                \
+        usleep((np)->delay);        \
+    } while(0)
+#undef DELAY
+#define DELAY(np)
+#else
+#define VERBOSE(np, fmt, ...)
+#define TRACE(np, fmt, ...)
+#define DELAY(np)
+#endif
 
 #endif //F32A_F32_H

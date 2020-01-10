@@ -17,38 +17,7 @@
 
 #endif
 
-#define INS_RETURN     0x00   // ;
-#define INS_EXECUTE    0x01   // ex
-#define INS_PJUMP      0x02   // jump <10-bit>
-#define INS_PCALL      0x03   // call <10-bit>
-#define INS_UNEXT      0x04   // micronext
-#define INS_NEXT       0x05   // next <10-bit>
-#define INS_IF         0x06   //  if  <10-bit>
-#define INS_MINUS_IF   0x07   // -if  <10-bit>
-#define INS_FETCH_P    0x08   // @p
-#define INS_FETCH_PLUS 0x09   // @+
-#define INS_FETCH_B    0x0a   // @b
-#define INS_FETCH      0x0b   // @
-#define INS_STORE_P    0x0c   // !p
-#define INS_STORE_PLUS 0x0d   // !+
-#define INS_STORE_B    0x0e   // !b
-#define INS_STORE      0x0f   // !
-#define INS_MULT_STEP  0x10   // +*
-#define INS_TWO_STAR   0x11   // 2*
-#define INS_TWO_SLASH  0x12   // 2/
-#define INS_NOT        0x13   // -
-#define INS_PLUS       0x14   // +
-#define INS_AND        0x15   // and
-#define INS_OR         0x16   // or 	ALU 	1.5 	(exclusive or)
-#define INS_DROP       0x17   // drop ALU 	1.5
-#define INS_DUP        0x18   // dup 	ALU 	1.5
-#define INS_POP        0x19   // pop 	ALU 	1.5
-#define INS_OVER       0x1a   // over 	ALU 	1.5
-#define INS_A          0x1b   // a 	ALU 	1.5 	(A to T)
-#define INS_NOP        0x1c   // . 	ALU 	1.5 	“nop”
-#define INS_PUSH       0x1d   // push 	ALU 	1.5 	(from T to R)
-#define INS_B_STORE    0x1e   // b! 	ALU 	1.5 	“b-store” (store into B)
-#define INS_A_STORE    0x1f   // a! 	ALU 	1.5 	“a-store” (store into A)
+extern void print(char *fmt, ...);
 
 // address layout in binary
 // 000000000 - 000111111    RAM
@@ -89,33 +58,7 @@
 #define F18_IO_PIN3       0x00008
 #define F18_IO_PIN1       0x00002
 
-#define P9          0x200    // P9 bit
-#define SIGN_BIT    0x20000  // 18 bit sign bit
-#define MASK3       0x7
-#define MASK8       0xff
-#define MASK9       0x1ff
-#define MASK10      0x3ff
-#define MASK18      0x3ffff
-#define MASK19      0x7ffff
-#define IMASK       0x15555  // exeucte/compiler mask
 
-#define SIGNED18(v)  (((int32_t)((v)<<14))>>14)
-
-#define FLAG_VERBOSE      0x00001
-#define FLAG_TRACE        0x00002
-#define FLAG_TERMINATE    0x00004
-#define FLAG_DUMP_REG     0x00010
-#define FLAG_DUMP_RAM     0x00020
-#define FLAG_DUMP_RS      0x00040
-#define FLAG_DUMP_DS      0x00080
-#define FLAG_RD_BIN_RIGHT 0x00800
-#define FLAG_RD_BIN_DOWN  0x00400
-#define FLAG_RD_BIN_LEFT  0x00200
-#define FLAG_RD_BIN_UP    0x00100
-#define FLAG_WR_BIN_RIGHT 0x08000
-#define FLAG_WR_BIN_LEFT  0x04000
-#define FLAG_WR_BIN_DOWN  0x02000
-#define FLAG_WR_BIN_UP    0x01000
 
 struct Instruction {
     union {
@@ -163,27 +106,6 @@ static void put_instruction(u18 v) {
             i.parts.in03);
 }
 
-#ifdef DEBUG
-#define VERBOSE(np, fmt, ...) do {            \
-    if ((np)->flags & FLAG_VERBOSE)            \
-        fprintf(stderr, fmt, __VA_ARGS__);        \
-        fflush(stderr);        \
-    } while(0)
-#define TRACE(np, fmt, ...) do {                \
-    if ((np)->flags & FLAG_TRACE)                \
-        fprintf(stderr, fmt, __VA_ARGS__);        \
-        fflush(stderr);              \
-    } while(0)
-#define DELAY(np) do {               \
-    if ((np)->delay)                \
-        usleep((np)->delay);        \
-    } while(0)
-#else
-#define VERBOSE(np, fmt, ...)
-#define TRACE(np, fmt, ...)
-#define DELAY(np)
-#endif
-
 // I do not think it matters in the emulator which way the posh and pop goes
 #define PUSH_ds(np, val) (np)->ds[(np)->ds_pointer++ & 0x7] = (val)
 #define POP_ds(np)      (np)->ds[--(np)->ds_pointer & 0x7]
@@ -228,7 +150,7 @@ static void put_instruction(u18 v) {
 #define DUMP(np)
 #endif
 
-static char *f18_instruction_name[] = {
+char *f18_instruction_name[] = {
         ";", "ex", "jump", "call", "unext", "next", "if", "-if",
         "@p", "@+", "@b", "@", "!p", "!+", "!b", "!",
         "+*", "2*", "2/", "-", "+", "and", "or", "drop",
@@ -252,7 +174,9 @@ struct {
         {"stdio",  IOREG_STDIO},
         {"stdin",  IOREG_STDIN},
         {"stdout", IOREG_STDOUT},
-        {"tty",    IOREG_USART},
+        {"usart",    IOREG_USART},
+        {"i2c1",    IOREG_I2C1},
+        {"spi1",    IOREG_SPI1},
 
         {"io",     IOREG_IO},
         {"data",   IOREG_DATA},
@@ -292,12 +216,6 @@ int parse_symbol(char **p_pointer, u18 *p_register) {
     return 0;
 }
 
-#define TOKEN_ERROR     -1
-#define TOKEN_EMPTY     0
-#define TOKEN_MNEMONIC1 1
-#define TOKEN_MNEMONIC2 2
-#define TOKEN_VALUE     3
-
 //
 // parse:
 //
@@ -306,7 +224,7 @@ int parse_symbol(char **p_pointer, u18 *p_register) {
 //   ( '(' .* ')' )* <hex>
 //   ( '(' .* ')' )* \<blank> .*
 //
-int parse_instruction(char **p_pointer, u18 *p_instruction, u18 *p_destination) {
+int parse_instruction(u8 **p_pointer, u18 *p_instruction, u18 *p_destination) {
     char *ptr = *p_pointer;
     char *word;
     u18 value = 0;
@@ -434,39 +352,39 @@ static inline u9 a_auto(struct Node *np) {
     return a;
 }
 
-static u18 read_mem(struct Node *np, u18 addr) {
+static u18 read_mem(struct Node *np, u18 reg) {
     u18 value;
-    if (addr <= RAM_END2) {
-        value = np->ram[addr & 0x3f];
+    if (reg <= RAM_END2) {
+        value = np->ram[reg & 0x3f];
         put_instruction(value);
-        VERBOSE(np, "RAM[%06x]<--[%s]\n", addr, instruction_text);
-    } else if (addr <= ROM_END2) {
-        value = np->rom[(addr - ROM_START) & 0x3f];
+        VERBOSE(np, "RAM[%06x]<--[%s]\n", reg, instruction_text);
+    } else if (reg <= ROM_END2) {
+        value = np->rom[(reg - ROM_START) & 0x3f];
         put_instruction(value);
-        VERBOSE(np, "ROM[%06x]<--[%s]\n", addr, instruction_text);
+        VERBOSE(np, "ROM[%06x]<--[%s]\n", reg, instruction_text);
     } else {
-        value = (*np->read)(np, addr);
+        value = (*np->read)(np, reg);
         put_instruction(value);
-        VERBOSE(np, "REG[%06x]<--[%s]\n", addr, instruction_text);
+        VERBOSE(np, "REG[%06x]<--[%s]\n", reg, instruction_text);
     }
     return value;
 }
 
-static void write_mem(struct Node *node, u18 addr, u18 value) {
-    if (addr <= RAM_END2) {
-        node->ram[addr & 0x3f] = value;
+static void write_mem(struct Node *node, u18 reg, u18 value) {
+    if (reg <= RAM_END2) {
+        node->ram[reg & 0x3f] = value;
         put_instruction(value);
-        VERBOSE(node, "RAM[%06x]-->[%s]\n", addr, instruction_text);
-    } else if (addr <= ROM_END2) {
+        VERBOSE(node, "RAM[%06x]-->[%s]\n", reg, instruction_text);
+    } else if (reg <= ROM_END2) {
         put_instruction(value);
-        VERBOSE(node, "ROM[%06x]-->[%s]\n", addr, instruction_text);
+        VERBOSE(node, "ROM[%06x]-->[%s]\n", reg, instruction_text);
         fprintf(stderr, "warning: try to write in ROM area %x, value=%d\n",
-                addr, value);
-        // node->rom[(addr-ROM_START) & 0x3f] = value;
+                reg, value);
+        // node->rom[(reg-ROM_START) & 0x3f] = value;
     } else {
         put_instruction(value);
-        (*node->write)(node, addr, value);
-        VERBOSE(node, "REG[%06x]-->[%s]\n", addr, instruction_text);
+        (*node->write)(node, reg, value);
+        VERBOSE(node, "REG[%06x]-->[%s]\n", reg, instruction_text);
     }
 }
 
