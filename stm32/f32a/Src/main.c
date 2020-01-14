@@ -16,7 +16,7 @@ extern char *f18_instruction_name[];
 I2C_HandleTypeDef hi2c1;
 SPI_HandleTypeDef hspi1;
 UART_HandleTypeDef huart1;
-struct Node node = {0};
+struct Node g_node = {0};
 
 void SystemClock_Config(void);
 
@@ -73,8 +73,8 @@ static void write_io_register(struct Node *node, u18 io_register, u18 value) {
 }
 
 static u18 read_io_register(struct Node *node, u18 io_register) {
-    uint8_t buf[256];
-    uint8_t *ptr;
+    char buf[256];
+    char *ptr;
     u18 instruction;
     u18 instruction_x;
     u18 dest;
@@ -89,7 +89,7 @@ static u18 read_io_register(struct Node *node, u18 io_register) {
     // Interpreter mode channel
     i = 0;
     while (i < (sizeof(buf) - 1)) {
-        HAL_StatusTypeDef status = HAL_UART_Receive(&huart1, &buf[i], 1, 0x1000000);
+        HAL_StatusTypeDef status = HAL_UART_Receive(&huart1, (uint8_t *)&buf[i], 1, 0x1000000);
         if (status != HAL_OK) {
             if (status == HAL_ERROR)  // it was stdin !
                 node->flags |= FLAG_TERMINATE;  // lets terminate
@@ -169,11 +169,11 @@ static u18 read_io_register(struct Node *node, u18 io_register) {
 }
 
 static void Node_Init() {
-    memset(&node, 0, sizeof(struct Node));
-    node.read = read_io_register;
-    node.write = write_io_register;
-    node.b = IOREG_USART;
-    node.p = IOREG_I2C1;
+    memset(&g_node, 0, sizeof(struct Node));
+    g_node.read = read_io_register;
+    g_node.write = write_io_register;
+    g_node.b = IOREG_USART;
+    g_node.p = IOREG_I2C1;
 }
 
 #define DEVICE_ADDRESS(da) ((da) << 1)
@@ -222,7 +222,7 @@ int main(void) {
         }
     }
 #endif
-//    f18_emulate(&node);
+//    f18_emulate(&g_node);
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
     while (1) {
@@ -281,6 +281,9 @@ int main(void) {
                 }
                 break;
             }
+            default:
+                state = READING_READY;
+                break;
         }
 
 

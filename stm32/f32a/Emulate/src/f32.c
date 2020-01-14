@@ -1,8 +1,6 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <errno.h>
 #include "f32.h"
 
 #if defined(WIN32)
@@ -59,36 +57,35 @@ extern void print(char *fmt, ...);
 #define F18_IO_PIN1       0x00002
 
 
-
 struct Instruction {
     union {
         u18 base;
         struct {
-            unsigned int in03: 3;
-            unsigned int in02: 5;
-            unsigned int in01: 5;
-            unsigned int in00: 5;
+            u8 in03: 3;
+            u8 in02: 5;
+            u8 in01: 5;
+            u8 in00: 5;
             unsigned int padding: 14;
         } parts;
         struct {
-            unsigned int b17: 1;
-            unsigned int b16: 1;
-            unsigned int b15: 1;
-            unsigned int b14: 1;
-            unsigned int b13: 1;
-            unsigned int b12: 1;
-            unsigned int b11: 1;
-            unsigned int b10: 1;
-            unsigned int b09: 1;
-            unsigned int b08: 1;
-            unsigned int b07: 1;
-            unsigned int b06: 1;
-            unsigned int b05: 1;
-            unsigned int b04: 1;
-            unsigned int b03: 1;
-            unsigned int b02: 1;
-            unsigned int b01: 1;
-            unsigned int b00: 1;
+            u8 b17: 1;
+            u8 b16: 1;
+            u8 b15: 1;
+            u8 b14: 1;
+            u8 b13: 1;
+            u8 b12: 1;
+            u8 b11: 1;
+            u8 b10: 1;
+            u8 b09: 1;
+            u8 b08: 1;
+            u8 b07: 1;
+            u8 b06: 1;
+            u8 b05: 1;
+            u8 b04: 1;
+            u8 b03: 1;
+            u8 b02: 1;
+            u8 b01: 1;
+            u8 b00: 1;
             unsigned int padding: 14;
         } bits;
     };
@@ -174,9 +171,9 @@ struct {
         {"stdio",  IOREG_STDIO},
         {"stdin",  IOREG_STDIN},
         {"stdout", IOREG_STDOUT},
-        {"usart",    IOREG_USART},
-        {"i2c1",    IOREG_I2C1},
-        {"spi1",    IOREG_SPI1},
+        {"usart",  IOREG_USART},
+        {"i2c1",   IOREG_I2C1},
+        {"spi1",   IOREG_SPI1},
 
         {"io",     IOREG_IO},
         {"data",   IOREG_DATA},
@@ -224,7 +221,7 @@ int parse_symbol(char **p_pointer, u18 *p_register) {
 //   ( '(' .* ')' )* <hex>
 //   ( '(' .* ')' )* \<blank> .*
 //
-int parse_instruction(u8 **p_pointer, u18 *p_instruction, u18 *p_destination) {
+int parse_instruction(char **p_pointer, u18 *p_instruction, u18 *p_destination) {
     char *ptr = *p_pointer;
     char *word;
     u18 value = 0;
@@ -308,25 +305,26 @@ static void dump_ram(struct Node *np) {
         fprintf(stderr, "ram[%d]=%05x\n", i, np->ram[i]);
 }
 
-static void dump_ds(struct Node *np) {
+static void dump_ds(struct Node *node) {
     int i;
-    fprintf(stderr, "ds_t=%05x,ds_s=%05x", np->ds_t, np->ds_s);
-    for (i = 0; i < 8; i++)
-        fprintf(stderr, ",%05x", np->ds[(np->ds_pointer + i - 1) & 0x7]);
-    fprintf(stderr, "\n");
+    VERBOSE(node, "DSS[      ]---[%05X, %05X", node->ds_t, node->ds_s);
+    for (i = 0; i < 8; i++) {
+        VERBOSE(node, ", %05X", node->ds[(node->ds_pointer + i - 1) & 0x7]);
+    }
+    VERBOSE(node, "]%c", '\n');
 }
 
-static void dump_rs(struct Node *np) {
+static void dump_rs(struct Node *node) {
     int i;
-    fprintf(stderr, "rs_r=%05x", np->rs_r);
-    for (i = 0; i < 8; i++)
-        fprintf(stderr, ",%05x", np->rs[(np->rs_pointer + i - 1) & 0x7]);
-    fprintf(stderr, "\n");
+    VERBOSE(node, "RSS[      ]---[%05X", node->rs_r);
+    for (i = 0; i < 8; i++) {
+        VERBOSE(node, ", %05X", node->rs[(node->rs_pointer + i - 1) & 0x7]);
+    }
+    VERBOSE(node, "]%c", '\n');
 }
 
-static void dump_reg(struct Node *np) {
-    fprintf(stderr, "ds_t=%05x,a=%05x,b=%03x,c=%x,p=%x,i=%x,ds_s=%05x,rs_r=%05x\n",
-            np->ds_t, np->a, np->b, np->c, np->p, np->i, np->ds_s, np->rs_r);
+static void dump_reg(struct Node *node) {
+    VERBOSE(node, "REG[      ]---[A=%05X, B=%05X, C=%05X, P=%05X, I=%05X]\n", node->a, node->b, node->c, node->p, node->i);
 }
 
 // read value of P return the current value and
@@ -365,7 +363,7 @@ static u18 read_mem(struct Node *np, u18 reg) {
     } else {
         value = (*np->read)(np, reg);
         put_instruction(value);
-        VERBOSE(np, "REG[%06x]<--[%s]\n", reg, instruction_text);
+        VERBOSE(np, "VAL[%06x]<--[%s]\n", reg, instruction_text);
     }
     return value;
 }
@@ -384,7 +382,7 @@ static void write_mem(struct Node *node, u18 reg, u18 value) {
     } else {
         put_instruction(value);
         (*node->write)(node, reg, value);
-        VERBOSE(node, "REG[%06x]-->[%s]\n", reg, instruction_text);
+        VERBOSE(node, "VAL[%06x]-->[%s]\n", reg, instruction_text);
     }
 }
 

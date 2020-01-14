@@ -1,17 +1,29 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
+#include <io.h>
 #include "f32.h"
 
+extern char *f18_instruction_name[];
 static int fd;
+
+void print(char *fmt, ...) {
+    va_list args;
+
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+}
+
 
 static void write_io_register(struct Node *node, u18 io_register, u18 value) {
     switch (io_register) {
-        case IOREG_TTY: {
-            fprintf(stdout, "%c", value);
+        case IOREG_USART: {
+            fprintf(stderr, "%c", value);
             break;
         }
         default:
-            fprintf(stdout, "[%08x] %c", io_register, value);
+            fprintf(stderr, "[%08x] %c", io_register, value);
             break;
     }
 }
@@ -28,7 +40,7 @@ static u18 read_io_register(struct Node *node, u18 io_register) {
     again:
     // read line from fd until '\n' is found or buffer overflow
     // VERBOSE(node,"read line fd=%d\n", fd);
-    if (fd != 0 && (node->flags & FLAG_TERMINATE) && io_register != IOREG_TTY)
+    if (fd != 0 && (node->flags & FLAG_TERMINATE) && io_register != IOREG_USART)
         return 0;
 
 
@@ -121,9 +133,9 @@ void f18_initialize(struct Node *node, int argc, char **argv) {
     memset(node, 0, sizeof(struct Node));
     node->read = read_io_register;
     node->write = write_io_register;
-    node->b = IOREG_TTY;
+    node->b = IOREG_USART;
     node->p = IOREG_RDLU;
-    node->flags = FLAG_VERBOSE | FLAG_TRACE;
+    node->flags = FLAG_VERBOSE | FLAG_TRACE | FLAG_DUMP_DS | FLAG_DUMP_RS | FLAG_DUMP_REG;
     fd = open(argv[1], 0);
 }
 

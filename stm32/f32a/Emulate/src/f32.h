@@ -133,7 +133,7 @@ void f18_emulate(struct Node *node);
 #define TOKEN_MNEMONIC2 2
 #define TOKEN_VALUE     3
 
-int parse_instruction(u8 **p_pointer, u18 *p_instruction, u18 *p_destination);
+int parse_instruction(char **p_pointer, u18 *p_instruction, u18 *p_destination);
 
 
 #ifdef DEBUG
