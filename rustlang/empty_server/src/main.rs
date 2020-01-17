@@ -15,7 +15,7 @@ use std::borrow::Borrow;
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::io::{Bytes, Error, ErrorKind, Result, Read};
+use std::io::{Bytes, Error, ErrorKind, Result, Read, BufReader};
 use std::sync::Mutex;
 
 use rocket::fairing::AdHoc;
@@ -33,7 +33,7 @@ struct ProxyRead {
 }
 
 impl ProxyRead {
-    fn new(r: Response)  -> ProxyRead {
+    fn new(r: Response) -> ProxyRead {
         ProxyRead { inner: Box::new(r) }
     }
 }
@@ -70,7 +70,9 @@ fn proxy(GUID: Option<String>, SIG: Option<String>) -> io::Result<Stream<ProxyRe
         return if resp.status().is_success() {
             #[cfg(feature = "enable_uncompressed")]
                 {
-                    let mut arch = zip::ZipArchive::new(resp).unwrap();
+                    let mut buf: Vec<u8> = vec![];
+                    resp.copy_to(&mut buf).unwrap();
+                    let mut arch = zip::ZipArchive::new(buf.as_slice()).unwrap();
                     for i in 0..arch.len() {
                         let mut file = arch.by_index(i).unwrap();
                         if !file.name().contains("sig") {
