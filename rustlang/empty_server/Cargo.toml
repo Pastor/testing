@@ -12,6 +12,8 @@ env_logger = "^0.6"
 zip = "^0.5.4"
 reqwest = { version = "0.10", features = ["blocking", "stream"] }
 
-#[features]
+[features]
 #default = ["enable_uncompressed"]
+default = ["new_uninit"]
 #enable_uncompressed = []
+new_uninit = []

@@ -11,7 +11,7 @@ extern crate rocket_contrib;
 
 use std::{env, io, result};
 use reqwest::blocking::Response;
-use std::borrow::Borrow;
+use std::borrow::{Borrow, Cow};
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -60,7 +60,19 @@ fn proxy_url() -> Option<String> {
     }
 }
 
-#[allow(non_snake_case)]
+//<a href="https://github.com/rust-lang/rust/issues/41966">Ошибка</a>
+//struct Dummy<'a> {
+//    m: &'a [u8],
+//    inner: Box<dyn Read>,
+//}
+//
+//impl<'a> Dummy<'a> {
+//    fn new<E: Read+Sized>(r: E) -> Dummy<'a> where E: 'a {
+//        Dummy {inner: Box::new(r), m: vec![].as_slice()}
+//    }
+//}
+
+#[allow(non_snake_case, unused_variables)]
 #[get("/?<GUID>&<SIG>")]
 fn proxy(GUID: Option<String>, SIG: Option<String>) -> io::Result<Stream<ProxyRead>> {
     let url = proxy_url();
