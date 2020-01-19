@@ -10,39 +10,23 @@ extern crate rocket;
 extern crate rocket_contrib;
 
 use std::{env, io, result};
-use reqwest::blocking::Response;
 use std::borrow::{Borrow, Cow};
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::io::{Bytes, Error, ErrorKind, Result, Read, BufReader};
+use std::ffi::OsString;
+use std::io::{BufReader, Bytes, Cursor, Error, ErrorKind, Read, Result};
 use std::sync::Mutex;
 
+use reqwest::blocking::Response;
+use rocket::data::DataStream;
 use rocket::fairing::AdHoc;
 use rocket::outcome::Outcome::*;
 use rocket::request::{self, FromRequest, Request};
 use rocket::response::Stream;
-use rocket::data::DataStream;
-use std::ffi::OsString;
 
 #[cfg(test)]
 mod tests;
-
-struct ProxyRead {
-    inner: Box<Response>
-}
-
-impl ProxyRead {
-    fn new(r: Response) -> ProxyRead {
-        ProxyRead { inner: Box::new(r) }
-    }
-}
-
-impl Read for ProxyRead {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner.read(buf)
-    }
-}
 
 #[cfg(debug_assertions)]
 fn proxy_url() -> Option<String> {
@@ -55,49 +39,48 @@ fn proxy_url() -> Option<String> {
 #[cfg(not(debug_assertions))]
 fn proxy_url() -> Option<String> {
     match env::var_os("DOCSTORE_HOSTNAME") {
-        Some(token) => Some(token.into_string().unwrap()),
+        Some(ref token) => Some(token.into_string().unwrap()),
         None => None
     }
 }
 
-//<a href="https://github.com/rust-lang/rust/issues/41966">Ошибка</a>
-//struct Dummy<'a> {
-//    m: &'a [u8],
-//    inner: Box<dyn Read>,
-//}
-//
-//impl<'a> Dummy<'a> {
-//    fn new<E: Read+Sized>(r: E) -> Dummy<'a> where E: 'a {
-//        Dummy {inner: Box::new(r), m: vec![].as_slice()}
-//    }
-//}
+fn error_response(s: &str) -> rocket::Response {
+    rocket::Response::build()
+        .raw_header("Content-Type", "text/plain")
+        .status(rocket::http::Status::BadRequest)
+        .sized_body(Cursor::new(s))
+        .finalize()
+}
 
 #[allow(non_snake_case, unused_variables)]
 #[get("/?<GUID>&<SIG>")]
-fn proxy(GUID: Option<String>, SIG: Option<String>) -> io::Result<Stream<ProxyRead>> {
+fn proxy<'r>(GUID: Option<String>, SIG: Option<String>) -> rocket::Response<'r> {
     let url = proxy_url();
     if url.is_some() && GUID.is_some() {
         let url = format!("{}/*/{}", url.unwrap(), GUID.unwrap());
-        let resp = reqwest::blocking::get(url.as_str()).unwrap();
+        let mut resp = reqwest::blocking::get(url.as_str()).unwrap();
         return if resp.status().is_success() {
             #[cfg(feature = "enable_uncompressed")]
                 {
                     let mut buf: Vec<u8> = vec![];
                     resp.copy_to(&mut buf).unwrap();
-                    let mut arch = zip::ZipArchive::new(buf.as_slice()).unwrap();
+                    let reader = std::io::Cursor::new(buf);
+                    let mut arch = zip::ZipArchive::new(reader).unwrap();
                     for i in 0..arch.len() {
-                        let mut file = arch.by_index(i).unwrap();
+                        let file = arch.by_index(i).unwrap();
                         if !file.name().contains("sig") {
-                            return Err(Error::new(ErrorKind::InvalidData, "Find signature"));
+                            return error_response("Find signature");
                         }
                     }
                 }
-            Ok(Stream::from(ProxyRead::new(resp)))
+            let mut response = rocket::Response::new();
+            response.set_streamed_body(resp);
+            return response;
         } else {
-            Err(Error::new(ErrorKind::InvalidData, "Can't fetch GUID"))
-        }
+            error_response("Can't fetch GUID")
+        };
     }
-    Err(Error::new(ErrorKind::InvalidInput, "Hostname for docstore not defined"))
+    error_response("Hostname for docstore not defined")
 }
 
 #[catch(404)]
