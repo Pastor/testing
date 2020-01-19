@@ -24,9 +24,11 @@ use rocket::fairing::AdHoc;
 use rocket::outcome::Outcome::*;
 use rocket::request::{self, FromRequest, Request};
 use rocket::response::Stream;
+//use crate::store::Client;
 
 #[cfg(test)]
 mod tests;
+mod store;
 
 #[cfg(debug_assertions)]
 fn proxy_url() -> Option<String> {
@@ -52,12 +54,13 @@ fn error_response(s: &str) -> rocket::Response {
         .finalize()
 }
 
-#[allow(non_snake_case, unused_variables)]
+#[allow(non_snake_case, unused_variables, unused_mut)]
 #[get("/?<GUID>&<SIG>")]
 fn proxy<'r>(GUID: Option<String>, SIG: Option<String>) -> rocket::Response<'r> {
     let url = proxy_url();
     if url.is_some() && GUID.is_some() {
         let url = format!("{}/*/{}", url.unwrap(), GUID.unwrap());
+        info!("Proxy request: '{}'", url);
         let mut resp = reqwest::blocking::get(url.as_str()).unwrap();
         return if resp.status().is_success() {
             #[cfg(feature = "enable_uncompressed")]
@@ -95,5 +98,6 @@ fn main_rocket() -> rocket::Rocket {
 }
 
 fn main() {
+//    let s = Client::new("b".to_string());
     main_rocket().launch();
 }

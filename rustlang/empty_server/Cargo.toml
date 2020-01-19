@@ -10,7 +10,15 @@ rocket_contrib = "^0.4.2"
 log = "^0.4"
 env_logger = "^0.6"
 zip = "^0.5.4"
-reqwest = { version = "0.10", features = ["blocking", "stream"] }
+reqwest = { version = "^0.10", features = ["blocking", "stream"] }
+
+[dev-dependencies]
+rusoto_core = "^0.42.0"
+rusoto_sqs = "^0.42.0"
+rusoto_s3 = "^0.42.0"
+futures = "^0.1.16"
+futures-fs = "^0.0.3"
+#minio-rs = { git = "https://github.com/minio/minio-rs.git", version = "0.1.0"}
 
 #[features]
 #default = ["enable_uncompressed"]
