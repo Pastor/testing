@@ -39,7 +39,7 @@ fn proxy_url() -> Option<String> {
 #[cfg(not(debug_assertions))]
 fn proxy_url() -> Option<String> {
     match env::var_os("DOCSTORE_HOSTNAME") {
-        Some(ref token) => Some(token.into_string().unwrap()),
+        Some(token) => Some(token.into_string().unwrap()),
         None => None
     }
 }
