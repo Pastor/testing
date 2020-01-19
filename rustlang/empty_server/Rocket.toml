@@ -4,15 +4,15 @@ json = 1048576
 msgpack = 1048576
 
 [development]
-address = "localhost"
-port = 8000
+address = "127.0.0.1"
+port = 8002
 workers = 1
 keep_alive = 5
-log = "normal"
+log = "debug"
 
 [staging]
 address = "0.0.0.0"
-port = 8000
+port = 8001
 workers = 8
 keep_alive = 5
 log = "normal"
@@ -24,3 +24,4 @@ workers = 12
 keep_alive = 5
 log = "critical"
 limits = { forms = 32768 }
+secret_key="MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
