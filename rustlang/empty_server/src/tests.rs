@@ -11,7 +11,9 @@ const SIG: &str = "WWREQkI1OHpVcjVWMXFUbDY0V29qSlBCdTQ2dDRRcDRGNDV0UXZKdUVOT3VFb
 fn success_get() {
     let client = Client::new(main_rocket()).unwrap();
 
-    let mut res = client.get(format!("/request?GUID={}&SIG={}", GUID, SIG)).dispatch();
+    let mut res = client
+        .get(format!("/request?GUID={}&SIG={}", GUID, SIG))
+        .dispatch();
     assert_eq!(res.status(), Status::Ok);
 
     let body = res.body_string().unwrap();

@@ -17,17 +17,33 @@ use rusoto_s3::{
     StreamingBody, UploadPartCopyRequest, UploadPartRequest, S3,
 };
 use std::env;
+use super::Store;
+use std::io::Read;
 
-pub struct Client {
+pub struct StoreS3 {
     region: Region,
     s3: S3Client,
     bucket_name: String,
     bucket_deleted: bool,
 }
 
-impl Client {
-    // construct S3 testing client
-    pub fn new(bucket_name: String) -> Client {
+impl Store for StoreS3 {
+    fn put<E: Read + Sized>(&self, object_name: &str, r: E)-> bool {
+        let put_request = PutObjectRequest {
+            bucket: self.bucket_name.to_owned(),
+            key: filename.to_owned(),
+            body: Some(r),
+            ..Default::default()
+        };
+
+        self.s3.put_object(put_request)
+            .sync()
+            .expect("Failed to put test object");
+    }
+}
+
+impl StoreS3 {
+    pub fn new(bucket_name: String) -> Self {
         let region = if let Ok(endpoint) = env::var("S3_ENDPOINT") {
             let region = Region::Custom {
                 name: "us-east-1".to_owned(),
@@ -42,7 +58,7 @@ impl Client {
             Region::UsEast1
         };
 
-        Client {
+        StoreS3 {
             region: region.to_owned(),
             s3: S3Client::new(region),
             bucket_name: bucket_name.to_owned(),
@@ -50,7 +66,6 @@ impl Client {
         }
     }
 
-    // construct an anonymous client for testing acls
     fn create_anonymous_client(&self) -> S3Client {
         if cfg!(feature = "disable_minio_unsupported") {
             // Minio does not support setting acls, so to make tests pass, return a client that has
@@ -70,8 +85,7 @@ impl Client {
             bucket: name.clone(),
             ..Default::default()
         };
-        self.s3
-            .create_bucket(create_bucket_req)
+        self.s3.create_bucket(create_bucket_req)
             .sync()
             .expect("Failed to create test bucket");
     }
@@ -82,8 +96,7 @@ impl Client {
             acl,
             ..Default::default()
         };
-        self.s3
-            .create_bucket(create_bucket_req)
+        self.s3.create_bucket(create_bucket_req)
             .sync()
             .expect("Failed to create test bucket");
     }
@@ -95,8 +108,7 @@ impl Client {
             ..Default::default()
         };
 
-        self.s3
-            .delete_object(delete_object_req)
+        self.s3.delete_object(delete_object_req)
             .sync()
             .expect("Couldn't delete object");
     }
@@ -110,14 +122,13 @@ impl Client {
             ..Default::default()
         };
 
-        self.s3
-            .put_object(put_request)
+        self.s3.put_object(put_request)
             .sync()
             .expect("Failed to put test object");
     }
 }
 
-impl Drop for Client {
+impl Drop for StoreS3 {
     fn drop(&mut self) {
         if self.bucket_deleted {
             return;
@@ -133,4 +144,3 @@ impl Drop for Client {
         }
     }
 }
-

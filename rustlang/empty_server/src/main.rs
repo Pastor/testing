@@ -9,14 +9,14 @@ extern crate rocket;
 #[macro_use]
 extern crate rocket_contrib;
 
-use std::{env, io, result};
-use std::borrow::{Borrow, Cow};
 use std::borrow::BorrowMut;
+use std::borrow::{Borrow, Cow};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::io::{BufReader, Bytes, Cursor, Error, ErrorKind, Read, Result};
 use std::sync::Mutex;
+use std::{env, io, result};
 
 use reqwest::blocking::Response;
 use rocket::data::DataStream;
@@ -24,17 +24,18 @@ use rocket::fairing::AdHoc;
 use rocket::outcome::Outcome::*;
 use rocket::request::{self, FromRequest, Request};
 use rocket::response::Stream;
-//use crate::store::Client;
+
+mod store;
+use store::{StoreS3, Store};
 
 #[cfg(test)]
 mod tests;
-mod store;
 
 #[cfg(debug_assertions)]
 fn proxy_url() -> Option<String> {
     match env::var_os("DOCSTORE_HOSTNAME") {
         Some(token) => Some(token.into_string().unwrap()),
-        None => Some("http://ya.ru".to_string())
+        None => Some("http://ya.ru".to_string()),
     }
 }
 
@@ -42,7 +43,7 @@ fn proxy_url() -> Option<String> {
 fn proxy_url() -> Option<String> {
     match env::var_os("DOCSTORE_HOSTNAME") {
         Some(token) => Some(token.into_string().unwrap()),
-        None => None
+        None => None,
     }
 }
 
@@ -98,6 +99,6 @@ fn main_rocket() -> rocket::Rocket {
 }
 
 fn main() {
-//    let s = Client::new("b".to_string());
+    let _s = StoreS3::new("b".to_string());
     main_rocket().launch();
 }
