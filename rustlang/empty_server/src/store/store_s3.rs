@@ -19,6 +19,7 @@ use rusoto_s3::{
 use std::env;
 use super::Store;
 use std::io::Read;
+use std::result::Result::Ok;
 
 pub struct StoreS3 {
     region: Region,
@@ -28,17 +29,19 @@ pub struct StoreS3 {
 }
 
 impl Store for StoreS3 {
-    fn put<E: Read + Sized>(&self, object_name: &str, r: E)-> bool {
+    fn put<E: Read + Sized>(&self, object_name: &str, r: E) -> bool {
         let put_request = PutObjectRequest {
             bucket: self.bucket_name.to_owned(),
             key: filename.to_owned(),
             body: Some(r),
             ..Default::default()
         };
-
-        self.s3.put_object(put_request)
-            .sync()
-            .expect("Failed to put test object");
+        if let Err(reason) = self.s3.put_object(put_request).sync() {
+            error!("{:?}", reason);
+            false
+        } else {
+            true
+        }
     }
 }
 
