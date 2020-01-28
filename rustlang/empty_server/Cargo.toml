@@ -11,15 +11,17 @@ log = "^0.4"
 env_logger = "^0.6"
 zip = "^0.5.4"
 reqwest = { version = "^0.10", features = ["blocking", "stream"] }
-
-[dev-dependencies]
 rusoto_core = "^0.42.0"
 rusoto_sqs = "^0.42.0"
 rusoto_s3 = "^0.42.0"
 futures = "^0.1.16"
 futures-fs = "^0.0.3"
+
+#[dev-dependencies]
 #minio-rs = { git = "https://github.com/minio/minio-rs.git", version = "0.1.0"}
 
-#[features]
+[features]
+default = ["s3"]
 #default = ["enable_uncompressed"]
 #enable_uncompressed = []
+s3 = []

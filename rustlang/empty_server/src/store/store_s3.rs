@@ -32,8 +32,8 @@ impl Store for StoreS3 {
     fn put<E: Read + Sized>(&self, object_name: &str, r: E) -> bool {
         let put_request = PutObjectRequest {
             bucket: self.bucket_name.to_owned(),
-            key: filename.to_owned(),
-            body: Some(r),
+            key: object_name.to_owned(),
+//            body: Some(r),
             ..Default::default()
         };
         if let Err(reason) = self.s3.put_object(put_request).sync() {
