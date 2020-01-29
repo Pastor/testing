@@ -4,22 +4,27 @@ extern crate futures_fs;
 extern crate rusoto_core;
 extern crate rusoto_s3;
 
-use futures::{Future, Stream};
-use futures_fs::FsPool;
-use rusoto_core::credential::{AwsCredentials, DefaultCredentialsProvider, StaticProvider};
-use rusoto_core::{ProvideAwsCredentials, Region, RusotoError};
-use rusoto_s3::util::{PreSignedRequest, PreSignedRequestOption};
-use rusoto_s3::{
-    CORSConfiguration, CORSRule, CompleteMultipartUploadRequest, CompletedMultipartUpload,
-    CompletedPart, CopyObjectRequest, CreateBucketRequest, CreateMultipartUploadRequest,
-    DeleteBucketRequest, DeleteObjectRequest, GetObjectError, GetObjectRequest, HeadObjectRequest,
-    ListObjectsRequest, ListObjectsV2Request, PutBucketCorsRequest, PutObjectRequest, S3Client,
-    StreamingBody, UploadPartCopyRequest, UploadPartRequest, S3,
-};
 use std::env;
-use super::Store;
 use std::io::Read;
 use std::result::Result::Ok;
+
+use futures::{Future, Stream};
+use futures::*;
+use futures_fs::FsPool;
+use rusoto_core::{ProvideAwsCredentials, Region, RusotoError};
+use rusoto_core::credential::{AwsCredentials, DefaultCredentialsProvider, StaticProvider};
+use rusoto_s3::{
+    CompletedMultipartUpload, CompletedPart, CompleteMultipartUploadRequest, CopyObjectRequest,
+    CORSConfiguration, CORSRule, CreateBucketRequest, CreateMultipartUploadRequest,
+    DeleteBucketRequest, DeleteObjectRequest, GetObjectError, GetObjectRequest, HeadObjectRequest,
+    ListObjectsRequest, ListObjectsV2Request, PutBucketCorsRequest, PutObjectRequest, S3,
+    S3Client, StreamingBody, UploadPartCopyRequest, UploadPartRequest,
+};
+use rusoto_s3::util::{PreSignedRequest, PreSignedRequestOption};
+
+use super::Store;
+
+use self::rusoto_core::ByteStream;
 
 pub struct StoreS3 {
     region: Region,
@@ -29,11 +34,11 @@ pub struct StoreS3 {
 }
 
 impl Store for StoreS3 {
-    fn put<E: Read + Sized>(&self, object_name: &str, r: E) -> bool {
+    fn put(&self, object_name: &str, buf: Vec<u8>) -> bool {
         let put_request = PutObjectRequest {
             bucket: self.bucket_name.to_owned(),
             key: object_name.to_owned(),
-//            body: Some(r),
+            body: Some(buf.into()),
             ..Default::default()
         };
         if let Err(reason) = self.s3.put_object(put_request).sync() {
