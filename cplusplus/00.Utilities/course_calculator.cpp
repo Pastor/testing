@@ -193,7 +193,7 @@ static void parse_content(const std::wstring &text, StudentInfoList &students) {
 
 
 int main(int argc, char **argv) {
-    std::setlocale(LC_ALL, "");
+    setlocale(LC_ALL, "");
     if (argc < 2) {
         usage();
         return EXIT_FAILURE;
