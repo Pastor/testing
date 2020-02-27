@@ -31,3 +31,4 @@ add_subdirectory(3rdparty)
 
 add_subdirectory(00.Utilities)
 add_subdirectory(01.Conceptions)
+add_subdirectory(02.Exercise)
