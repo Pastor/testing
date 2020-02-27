@@ -4,30 +4,54 @@ extern crate futures_fs;
 extern crate rusoto_core;
 extern crate rusoto_s3;
 
-use futures::{Future, Stream};
-use futures_fs::FsPool;
-use rusoto_core::credential::{AwsCredentials, DefaultCredentialsProvider, StaticProvider};
-use rusoto_core::{ProvideAwsCredentials, Region, RusotoError};
-use rusoto_s3::util::{PreSignedRequest, PreSignedRequestOption};
-use rusoto_s3::{
-    CORSConfiguration, CORSRule, CompleteMultipartUploadRequest, CompletedMultipartUpload,
-    CompletedPart, CopyObjectRequest, CreateBucketRequest, CreateMultipartUploadRequest,
-    DeleteBucketRequest, DeleteObjectRequest, GetObjectError, GetObjectRequest, HeadObjectRequest,
-    ListObjectsRequest, ListObjectsV2Request, PutBucketCorsRequest, PutObjectRequest, S3Client,
-    StreamingBody, UploadPartCopyRequest, UploadPartRequest, S3,
-};
 use std::env;
+use std::io::Read;
+use std::result::Result::Ok;
 
-pub struct Client {
+use futures::{Future, Stream};
+use futures::*;
+use futures_fs::FsPool;
+use rusoto_core::{ProvideAwsCredentials, Region, RusotoError};
+use rusoto_core::credential::{AwsCredentials, DefaultCredentialsProvider, StaticProvider};
+use rusoto_s3::{
+    CompletedMultipartUpload, CompletedPart, CompleteMultipartUploadRequest, CopyObjectRequest,
+    CORSConfiguration, CORSRule, CreateBucketRequest, CreateMultipartUploadRequest,
+    DeleteBucketRequest, DeleteObjectRequest, GetObjectError, GetObjectRequest, HeadObjectRequest,
+    ListObjectsRequest, ListObjectsV2Request, PutBucketCorsRequest, PutObjectRequest, S3,
+    S3Client, StreamingBody, UploadPartCopyRequest, UploadPartRequest,
+};
+use rusoto_s3::util::{PreSignedRequest, PreSignedRequestOption};
+
+use super::Store;
+
+use self::rusoto_core::ByteStream;
+
+pub struct StoreS3 {
     region: Region,
     s3: S3Client,
     bucket_name: String,
     bucket_deleted: bool,
 }
 
-impl Client {
-    // construct S3 testing client
-    pub fn new(bucket_name: String) -> Client {
+impl Store for StoreS3 {
+    fn put(&self, object_name: &str, buf: Vec<u8>) -> bool {
+        let put_request = PutObjectRequest {
+            bucket: self.bucket_name.to_owned(),
+            key: object_name.to_owned(),
+            body: Some(buf.into()),
+            ..Default::default()
+        };
+        if let Err(reason) = self.s3.put_object(put_request).sync() {
+            error!("{:?}", reason);
+            false
+        } else {
+            true
+        }
+    }
+}
+
+impl StoreS3 {
+    pub fn new(bucket_name: String) -> Self {
         let region = if let Ok(endpoint) = env::var("S3_ENDPOINT") {
             let region = Region::Custom {
                 name: "us-east-1".to_owned(),
@@ -42,7 +66,7 @@ impl Client {
             Region::UsEast1
         };
 
-        Client {
+        StoreS3 {
             region: region.to_owned(),
             s3: S3Client::new(region),
             bucket_name: bucket_name.to_owned(),
@@ -50,7 +74,6 @@ impl Client {
         }
     }
 
-    // construct an anonymous client for testing acls
     fn create_anonymous_client(&self) -> S3Client {
         if cfg!(feature = "disable_minio_unsupported") {
             // Minio does not support setting acls, so to make tests pass, return a client that has
@@ -70,8 +93,7 @@ impl Client {
             bucket: name.clone(),
             ..Default::default()
         };
-        self.s3
-            .create_bucket(create_bucket_req)
+        self.s3.create_bucket(create_bucket_req)
             .sync()
             .expect("Failed to create test bucket");
     }
@@ -82,8 +104,7 @@ impl Client {
             acl,
             ..Default::default()
         };
-        self.s3
-            .create_bucket(create_bucket_req)
+        self.s3.create_bucket(create_bucket_req)
             .sync()
             .expect("Failed to create test bucket");
     }
@@ -95,8 +116,7 @@ impl Client {
             ..Default::default()
         };
 
-        self.s3
-            .delete_object(delete_object_req)
+        self.s3.delete_object(delete_object_req)
             .sync()
             .expect("Couldn't delete object");
     }
@@ -110,14 +130,13 @@ impl Client {
             ..Default::default()
         };
 
-        self.s3
-            .put_object(put_request)
+        self.s3.put_object(put_request)
             .sync()
             .expect("Failed to put test object");
     }
 }
 
-impl Drop for Client {
+impl Drop for StoreS3 {
     fn drop(&mut self) {
         if self.bucket_deleted {
             return;
@@ -133,4 +152,3 @@ impl Drop for Client {
         }
     }
 }
-
