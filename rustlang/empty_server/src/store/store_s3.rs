@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #![cfg(feature = "s3")]
 extern crate futures;
 extern crate futures_fs;
@@ -5,7 +6,7 @@ extern crate rusoto_core;
 extern crate rusoto_s3;
 
 use std::env;
-use std::io::Read;
+use std::io::{Read, BufReader};
 use std::result::Result::Ok;
 
 use futures::{Future, Stream};
@@ -25,6 +26,9 @@ use rusoto_s3::util::{PreSignedRequest, PreSignedRequestOption};
 use super::Store;
 
 use self::rusoto_core::ByteStream;
+use std::error::Error;
+use std::option::Option::Some;
+
 
 pub struct StoreS3 {
     region: Region,
@@ -46,6 +50,28 @@ impl Store for StoreS3 {
             false
         } else {
             true
+        }
+    }
+
+    fn get(&self, object_name: &str) -> Result<Vec<u8>, ()> {
+        let get_request = GetObjectRequest {
+            bucket: self.bucket_name.to_owned(),
+            key: object_name.to_owned(),
+            ..Default::default()
+        };
+        match self.s3.get_object(get_request).sync() {
+            Err(error) => {
+                error!("{}", error.to_string());
+                Err(())
+            }
+            Ok(result) => {
+                if let Some(stream) = result.body {
+                    let buf_reader = BufReader::new(stream.into_blocking_read());
+                    Ok(Vec::from(buf_reader.buffer()))
+                } else {
+                    Ok(Vec::new())
+                }
+            }
         }
     }
 }

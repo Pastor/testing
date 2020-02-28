@@ -1,8 +1,11 @@
-#include <cstdio>
 #include <cstdlib>
 #include <cctype>
 #include <iostream>
 #include <fstream>
+
+/**
+ * Исправьте код так, чтобы в выводе результата убрать первый пробельный символ
+ */
 
 int main(int argc, char **argv) {
     char *filename = "file_output_numeric.txt";
@@ -14,9 +17,10 @@ int main(int argc, char **argv) {
     std::fstream fin(filename, std::fstream::in);
 
     if (!fin.is_open()) {
-        std::cout << "File '%s' can't open" << filename << std::endl;
+        std::cerr << "File '" << filename << "' can't open" << std::endl;
         return EXIT_FAILURE;
     }
+    std::cout << "File '" << filename << "' was opened." << std::endl;
 
     while (fin >> std::noskipws >> ch) {
         if (isspace(ch)) {
