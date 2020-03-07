@@ -1,0 +1,112 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import datetime
+
+try:
+    import json
+except ImportError:
+    import simplejson as json
+
+SERV_ID_ARRAY = []
+
+DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+
+ANTIVIRUS_NOTIFY_NOTICE_TYPE = 5
+
+SUBJECT = 'Уведомление об окончании периода активации услуги Антивирус'
+MESSAGE = """
+Уважаемый(ая) %(name)s!
+Срок окончания периода активации услуги %(descr)s истекает %(timeto)s.
+
+Ключ продукта %(key)s.
+Антивирус доступен для скачивания по ссылке:
+%(url)s
+"""
+
+
+def send_mail(con, email_to, **kwargs):
+    msg = {'message': MESSAGE % kwargs, 'subject': SUBJECT, 'email_to': email_to}
+    con.call('sendMail', msg)
+
+
+def notify(msg, arg, con):
+    class SkipNotice(Exception):
+        pass
+
+    try:
+        service = arg['service']
+        field_service_id = ('service_id' if service['not_usbox'] else 'serv_id')
+        service_str = '%s_%s' % (field_service_id, service['serv_id'])
+
+        if service_str not in SERV_ID_ARRAY:
+            agrm_id = service['agrm_id']
+            uid = service['uid']
+            serv_id = service['serv_id']
+            account = con.call('getAccount', {'uid': uid})
+
+            if not account:
+                raise Exception('Account not exists for uid %s' % uid)
+
+            # check user notice
+            notices = con.call('getAccountNotices', {'uid': uid, 'notice_type': ANTIVIRUS_NOTIFY_NOTICE_TYPE})
+
+            if not notices:
+                raise SkipNotice('Notice of type %d is off for account, uid %s' % (ANTIVIRUS_NOTIFY_NOTICE_TYPE, uid))
+
+            # check vgroups notice (already notified)
+            agrm_notices = con.call(
+                'getAgreementNotices',
+                {
+                    'agrm_id': agrm_id,
+                    field_service_id: serv_id,
+                    'notice_type': ANTIVIRUS_NOTIFY_NOTICE_TYPE,
+                }
+            )
+
+            if agrm_notices and filter(lambda x: x['last_notice'], agrm_notices[0]['notices']):
+                raise SkipNotice('Antivirus already notificated, serv_id %s' % serv_id)
+
+            timeto = datetime.datetime.strptime(service['time_to'], DATETIME_FORMAT)
+
+            email_to = account['email']
+            if not email_to:
+                raise SkipNotice('Email not exists for uid %s' % service['uid'])
+
+            external_data = json.loads(service['external_data'])
+
+            params = {
+                'name': account['name'],
+                'timeto': timeto,
+                'descr': service['cat_descr'],
+                'url': external_data['url'].encode('ascii'),
+                'key': external_data['key'].encode('ascii'),
+            }
+
+            send_mail(con, email_to, **params)
+            SERV_ID_ARRAY.append(service_str)
+
+            now = datetime.datetime.now().strftime(DATETIME_FORMAT)
+            con.call(
+                'setAgreementNotice',
+                {
+                    'agrm_id': agrm_id,
+                    field_service_id: serv_id,
+                    'notice_type': ANTIVIRUS_NOTIFY_NOTICE_TYPE,
+                    'last_notice': now,
+                }
+            )
+
+            con.log_debug('ANTIVIRUS: Activation expire message has been successfully sent. E-mail %s' % email_to)
+        else:
+            con.log_debug('ANTIVIRUS: Activation expire message already sent for %s' % service_str)
+
+    except SkipNotice, e:
+        con.log_warning('ANTIVIRUS: Activation expire message skipped: %s' % str(e))
+
+    except Exception, e:
+        con.log_error('ANTIVIRUS: Activation expire message fails: %s' % str(e))
+
+
+import lbcore  # NOQA
+notify_msg = lbcore.Messenger(notify, "antivirus_activation_expire")

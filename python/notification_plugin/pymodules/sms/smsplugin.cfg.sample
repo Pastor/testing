@@ -1,0 +1,16 @@
+[Core]
+# Plugins directory
+# plugin/sms by default
+Dir = plugins/sms
+
+# Extension of plugin config file
+# cfg by default
+FileExt = cfg
+
+# Name of used plugin. SMS messages will not send if empty
+# Ex: Plugin = WebSMS SMTP
+Plugin = 
+
+# Log file
+# No logs by default
+Log = plugins/sms/sms.log
