@@ -40,6 +40,6 @@ def send_message(number, message, config):
         sleep(delay)
         logger.debug('Send "%s" to %s' % (message, number))
         print 'Отсылка "%s" по номеру "%s"' % (message, number)
-        command = "yowsup-cli demos -d --config-phone 74956642548 --send {} \"{}\"".format(number, message)
+        command = "yowsup-cli demos --config-phone 74956642548 --send {0} \"{1}\"".format(number, message)
         os.system(command)
         logger.debug('Send command: %s' % command)

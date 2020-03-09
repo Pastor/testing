@@ -14,13 +14,14 @@ while True:
         continue
     i = line.find(':')
     if i > 0:
-        number = line[i + 1:]
-        message = line[:i]
+        number = line[:i]
+        message = line[i + 1:]
         # Случайной число в диапазоне 1, 2
         delay = randrange(2, 4)
         # Задержка в серкундах
         sleep(delay)
-        command = "yowsup-cli demos -d --config-phone 74956642548 --send {} \"{}\"".format(number, message)
+        command = "yowsup-cli demos --config-phone 74956642548 --send {0} \"{1}\" >> " \
+                  "/var/opt/notification_delay.log 2>&1".format(number, message)
         os.system(command)
         print 'Отсылка "%s" по номеру "%s"' % (message, number)
 fd.seek(0, 0)
