@@ -4,16 +4,48 @@
 
 typedef unsigned char u8;
 typedef unsigned short u16;
-typedef unsigned int u32;
 
 static char const hex_chars[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
-enum FSM_State {
+enum FSMState {
     Begin, Length, Address, Type, Data, CRC, LF, Error
 };
 
-void write(u16 address, u8 type, u8 *data, u8 data_len) {
+enum HexType {
+    DataType = 0x00,
+    EOFType,
+    SegmentType,
+    StartSegmentRecordType,
+    ExtendedAddressType,
+    StartLinearAddressRecordType
+};
 
+void write(u16 address, enum HexType type, u8 *data, u8 data_len) {
+    char *text_type;
+    switch (type) {
+        default:
+            text_type = "unknown";
+            break;
+        case DataType:
+            text_type = "DataType";
+            break;
+        case EOFType:
+            text_type = "EOFType";
+            break;
+        case SegmentType:
+            text_type = "SegmentType";
+            break;
+        case StartSegmentRecordType:
+            text_type = "StartSegmentRecordType";
+            break;
+        case ExtendedAddressType:
+            text_type = "ExtendedAddressType";
+            break;
+        case StartLinearAddressRecordType:
+            text_type = "StartLinearAddressRecordType";
+            break;
+    }
+    fprintf(stdout, "Write(0x%04X, %s, %d)\n", address, text_type, data_len);
 }
 
 void write_hex(u8 d, u8 buf[2]) {
@@ -45,9 +77,10 @@ u16 read_u16_hex(u8 buf[4]) {
 }
 
 int main(int argc, char **argv) {
-    char *filename = "example.hex";
+    /**Default is BigBox3D firmware */
+    char *filename = "marlin_direct_dual.hex";
     FILE *fd;
-    enum FSM_State state = Begin;
+    enum FSMState state = Begin;
     bool running = true;
     char *error = "unknown";
     u8 length = 0;
@@ -55,20 +88,26 @@ int main(int argc, char **argv) {
     u8 buf[256];
     u8 num[4];
     u8 sum = 0;
-    u8 type = 0;
+    int lines = 0;
+    enum HexType type = DataType;
     int ch;
 
     if (argc > 1) {
         filename = argv[1];
     }
-    fd = fopen(filename, "rb");
+    fd = fopen(filename, "rt");
     if (0 == fd)
         return 1;
     while (!feof(fd) && running) {
         switch (state) {
             case Begin:
+                length = 0;
+                address = 0;
+                sum = 0;
+                type = DataType;
                 ch = fgetc(fd);
                 if (':' == ch) {
+                    ++lines;
                     state = Length;
                 } else {
                     error = "Begin not found";
@@ -93,19 +132,21 @@ int main(int argc, char **argv) {
                 num[2] = fgetc(fd);
                 num[3] = fgetc(fd);
                 address = read_u16_hex(num);
-                sum += address;
+                sum += read_u8_hex(num);
+                sum += read_u8_hex(num + 2);
                 state = Type;
                 break;
             case Type:
                 num[0] = fgetc(fd);
                 num[1] = fgetc(fd);
-                type = read_u8_hex(num);
+                type = (enum HexType) read_u8_hex(num);
+                sum += (u8) type;
                 state = Data;
                 break;
-            case Data:
+            case Data: {
+                int it = 0;
                 if (length > 0) {
-                    int it = 0;
-                    while (it < length) {
+                    while (it < length && !feof(fd)) {
                         num[0] = fgetc(fd);
                         num[1] = fgetc(fd);
                         buf[it] = read_u8_hex(num);
@@ -113,16 +154,27 @@ int main(int argc, char **argv) {
                         ++it;
                     }
                 }
-                state = CRC;
+
+                if (it != length) {
+                    state = Error;
+                    error = "Illegal data length";
+                } else {
+                    state = CRC;
+                }
+
                 break;
+            }
             case CRC: {
                 u8 crc;
                 num[0] = fgetc(fd);
                 num[1] = fgetc(fd);
                 crc = read_u8_hex(num);
-                if (crc + sum != 0) {
+                sum = ~sum;
+                sum += 0x01;
+                if (crc != sum) {
                     error = "Illegal CRC";
-                    state = Error;
+                    fprintf(stderr, "Line %d has illegal CRC\n", lines);
+                    state = LF;
                 } else {
                     write(address, type, buf, length);
                     state = LF;
@@ -133,6 +185,8 @@ int main(int argc, char **argv) {
                 ch = fgetc(fd);
                 state = Begin;
                 break;
+            default:
+                error = "unknown state";
             case Error:
                 fprintf(stderr, "Error: %s", error);
                 running = false;
@@ -140,5 +194,5 @@ int main(int argc, char **argv) {
         }
     }
     fclose(fd);
-    return EXIT_SUCCESS;
+    return state == Error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
