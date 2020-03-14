@@ -53,7 +53,7 @@ void write_hex(u8 d, u8 buf[2]) {
     buf[1] = hex_chars[(d & 0x0F) >> 0];
 }
 
-static inline u8 half_byte(char ch) {
+static inline u8 half_byte(u8 ch) {
     if (ch >= '0' && ch <= '9') ch = ch - '0';
     else if (ch >= 'a' && ch <= 'f') ch = ch - 'a' + 10;
     else if (ch >= 'A' && ch <= 'F') ch = ch - 'A' + 10;
