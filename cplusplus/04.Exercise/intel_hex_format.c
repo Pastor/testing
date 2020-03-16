@@ -109,6 +109,8 @@ int main(int argc, char **argv) {
                 if (':' == ch) {
                     ++lines;
                     state = Length;
+                } else if (EOF == ch) {
+                    running = false;
                 } else {
                     error = "Begin not found";
                     state = Error;
@@ -183,7 +185,14 @@ int main(int argc, char **argv) {
             }
             case LF:
                 ch = fgetc(fd);
-                state = Begin;
+                if ('\n' == ch) {
+                    state = Begin;
+                } else if (EOF == ch) {
+                    running = false;
+                } else {
+                    error = "Unknown EOL";
+                    state = Error;
+                }
                 break;
             default:
                 error = "unknown state";
