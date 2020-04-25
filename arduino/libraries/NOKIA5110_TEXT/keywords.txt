@@ -1,0 +1,25 @@
+# -----------------------------------------
+# Syntax colouring for NOKIA5110_TEXT library
+# -----------------------------------------
+
+# Datatypes (such as objects)
+ NOKIA5110_TEXT	KEYWORD1
+
+#Methods / functions
+
+LCDInit	KEYWORD2
+LCDgotoXY	KEYWORD2
+LCDClear	KEYWORD2
+LCDString	KEYWORD2
+LCDsetContrast	KEYWORD2
+LCDenableSleep	KEYWORD2
+LCDdisableSleep	KEYWORD2
+LCDClearBlock	KEYWORD2
+LCDCharacter	KEYWORD2
+LCDWrite	KEYWORD2
+LCDFont	KEYWORD2
+LCDSetPixel	KEYWORD2
+
+# Constants
+
+

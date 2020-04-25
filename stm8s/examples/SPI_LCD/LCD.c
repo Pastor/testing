@@ -2,8 +2,6 @@
 #include "LCD_config.h"
 #include "font_5x8.h"
 
-#define FONT_WIDTH 5
-
 void LCD_init() {
     LCD_gpio_init();
     LCD_CE_clear();

@@ -7,7 +7,8 @@
 *.cdb
 *.ihx
 *.bin
+*.elf
 *.lk
 *.o
 .idea
-.build_stm8s
+.build_stm8*

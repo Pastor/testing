@@ -1,5 +1,7 @@
 # Arduino, ESP8266, STM32, ESP32 and others uEEPROMLib
 
+Master status:   [![Build Status](https://travis-ci.org/Naguissa/uEEPROMLib.svg?branch=master)](https://travis-ci.org/Naguissa/uEEPROMLib)
+
 ## What is this repository for? ##
 
 I2C EEPROM library. Split from uRTCLib https://github.com/Naguissa/uRTCLib
@@ -19,7 +21,15 @@ For manual installation:
 
 
 
-## Example ##
+## Documentation and extras ##
+
+You can find all documentation and extras in this repository: https://github.com/Naguissa/uEEPROMLib_doc_and_extras
+
+Due GitHub limitations HTML documentation is not avaliable online, you need to download the zip.
+
+
+
+## Examples ##
 
 Included on example folder, available on Arduino IDE.
 
