@@ -1,5 +1,6 @@
 package com.example.smspoll
 
+import android.content.Context
 import android.os.*
 import android.telephony.SmsManager
 import android.util.Log
@@ -39,20 +40,23 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        val preferences = getPreferences(Context.MODE_PRIVATE)
+        val input = findViewById<TextView>(R.id.serverAddress)
+        input.text =
+            preferences.getString(URL_KEY, "http://192.168.2.177:8091/api/events")
     }
 
     fun connect(view: View) {
-        val button = view.findViewById<Button>(R.id.btnConnect)
+        val button = findViewById<Button>(R.id.btnConnect)
         button.isEnabled = longPoll.isCancelled
         if (longPoll.status == AsyncTask.Status.RUNNING)
             return
-        val input = view.findViewById<TextView>(R.id.serverAddress)
-        val url: String
-        if (input != null) {
-            url = input.text.toString()
-        } else {
-            url = "http://192.168.2.177:8091/api/events"
-        }
+        val input = findViewById<TextView>(R.id.serverAddress)
+        val url = input?.text?.toString() ?: "http://192.168.2.177:8091/api/events"
+        val preferences = getPreferences(Context.MODE_PRIVATE)
+        val editor = preferences.edit()
+        editor.putString(URL_KEY, url)
+        editor.apply()
         longPoll.execute("$url?timeout=45&category=sms")
         button.isEnabled = false
     }
@@ -104,5 +108,9 @@ class MainActivity : AppCompatActivity() {
 
     interface EventNotify {
         fun onEvent(eventsText: String)
+    }
+
+    companion object {
+        private const val URL_KEY = "SMS_Poll_Url"
     }
 }
