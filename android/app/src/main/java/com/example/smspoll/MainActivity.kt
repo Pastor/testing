@@ -65,16 +65,15 @@ class MainActivity : AppCompatActivity() {
         try {
             val smsManager: SmsManager = SmsManager.getDefault()
             smsManager.sendTextMessage(phoneNo, null, msg, null, null)
+        } catch (ex: Exception) {
             object : Handler(Looper.getMainLooper()) {
                 override fun handleMessage(msg: Message?) {
                     Toast.makeText(
-                        applicationContext, "Message Sent",
+                        applicationContext, "Ошибка отправки: " + ex.localizedMessage,
                         Toast.LENGTH_LONG
                     ).show()
                 }
-            }.obtainMessage()
-        } catch (ex: Exception) {
-            ex.printStackTrace()
+            }.sendEmptyMessage(0)
         }
     }
 
