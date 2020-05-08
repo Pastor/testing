@@ -17,13 +17,22 @@ import (
 
 const (
 	ServerAddress = "smtp.mail.ru"
-	FromAddress   = "3kbak.pi@mail.ru"
-	PortNumber    = 465
+	//FromAddress   = "3kbak.pi@mail.ru"
+	FromAddress = "2kbak.pi@mail.ru"
+	PortNumber  = 465
 
-	AttachmentFilePath = "E:\\YandexDisk\\YandexDisk\\Учеба\\2020.2\\Задания\\АПСУ"
-	InputFilePath      = "E:\\YandexDisk\\YandexDisk\\Учеба\\2020.2\\АПСУ.ЭК.txt"
-	Delimiter          = "==8E6C038B62D14BD2A014D2943594C07C=="
-	Subject            = "О сдаче задолженности по дисциплине «Автоматное программирование систем управления»"
+	//AttachmentFilePath = "E:\\YandexDisk\\YandexDisk\\Учеба\\2020.2\\Задания\\АПСУ"
+	AttachmentFilePath = "E:\\YandexDisk\\YandexDisk\\Учеба\\2020.2\\Задания\\РПП"
+	//InputFilePath      = "E:\\YandexDisk\\YandexDisk\\Учеба\\2020.2\\АПСУ.КР.txt"
+	//InputFilePath      = "E:\\YandexDisk\\YandexDisk\\Учеба\\2020.2\\АПСУ.ЭК.txt"
+	//InputFilePath = "E:\\YandexDisk\\YandexDisk\\Учеба\\2020.2\\РПП.КР.txt"
+	InputFilePath = "E:\\YandexDisk\\YandexDisk\\Учеба\\2020.2\\РПП.ЭК.txt"
+	Delimiter     = "==8E6C038B62D14BD2A014D2943594C07C=="
+	//WokName            = "«Автоматное программирование систем управления»"
+	WokName = "«Разработка программных приложений»"
+	//WokShortName       = "АПСУ"
+	WokShortName = "РПП"
+	Subject      = "О сдаче задолженности по дисциплине " + WokName
 )
 
 func write(message string) {
@@ -36,13 +45,13 @@ func write(message string) {
 	_, _ = fmt.Fprintln(f, fmt.Sprintf("[%v] %v", time.Now(), message))
 }
 
-func send2(username, group, to string, toCopy string, filename string) {
+func sendExercise(username, group, to string, toCopy string, filename string) {
 	m := gomail.NewMessage()
 	m.SetHeader("From", FromAddress)
 	m.SetHeader("To", to, toCopy)
 	m.SetHeader("Cc", m.FormatAddress("viruszold@gmail.com", "Хлебников Андрей Александрович"))
 	m.SetHeader("Subject", Subject)
-	m.SetBody("text/html", GetMessage(username, group, to))
+	m.SetBody("text/html", GetMessageForExercise(username, group, to))
 	m.Attach(path.Join(AttachmentFilePath, filename), gomail.Rename("Задание.docx"))
 
 	d := gomail.NewDialer(ServerAddress, PortNumber, FromAddress, os.Getenv("EMAIL_PASSWORD"))
@@ -50,6 +59,21 @@ func send2(username, group, to string, toCopy string, filename string) {
 		log.Panic(err)
 	}
 	write(fmt.Sprintf("Ф.И.О.: %s, Группа: %s, Задание: %s", username, group, filename))
+}
+
+func sendCourse(username, group, to string, toCopy string) {
+	m := gomail.NewMessage()
+	m.SetHeader("From", FromAddress)
+	m.SetHeader("To", to, toCopy)
+	m.SetHeader("Cc", m.FormatAddress("viruszold@gmail.com", "Хлебников Андрей Александрович"))
+	m.SetHeader("Subject", Subject)
+	m.SetBody("text/html", GetMessageForCourse(username, group, to))
+
+	d := gomail.NewDialer(ServerAddress, PortNumber, FromAddress, os.Getenv("EMAIL_PASSWORD"))
+	if err := d.DialAndSend(m); err != nil {
+		log.Panic(err)
+	}
+	write(fmt.Sprintf("Ф.И.О.: %s, Группа: %s, Оповещение о сдаче курсовой работы", username, group))
 }
 
 func send(username, group, to string, toCopy string, filename string) {
@@ -97,7 +121,7 @@ func send(username, group, to string, toCopy string, filename string) {
 	sampleMsg += fmt.Sprintf("\r\n--%s\r\n", Delimiter)
 	sampleMsg += "Content-Type: text/html; charset=\"utf-8\"\r\n"
 	sampleMsg += "Content-Transfer-Encoding: 7bit\r\n"
-	sampleMsg += fmt.Sprintf("\r\n%s", GetMessage(username, group, to))
+	sampleMsg += fmt.Sprintf("\r\n%s", GetMessageForExercise(username, group, to))
 
 	sampleMsg += fmt.Sprintf("\r\n--%s\r\n", Delimiter)
 	sampleMsg += "Content-Type: text/plain; charset=\"utf-8\"\r\n"
@@ -119,16 +143,30 @@ func send(username, group, to string, toCopy string, filename string) {
 	write(fmt.Sprintf("Ф.И.О.: %s, Группа: %s, Задание: %s", username, group, filename))
 }
 
-func GetMessage(username string, group string, to string) string {
+func GetMessageForExercise(username string, group string, to string) string {
 	return "<html><body>" +
-		"Добрый день " + username + ".\n\n" +
-		"<p>Вы получили это письмо, так как имеете задолженность по дисциплине «Автоматное программирование систем управления».\n" +
-		"<p>К письму прилагается задание, выполнение которого требуется для сдачи дисциплины.\n" +
-		"<p>Выполните прилагаемое задание в рукописном виде(на листке должно быть указано Ф.И.О.(" + username + "), группа(" + group + "), задания) и пришлите фотографию, практическую часть задания следует оформить в виде кода на языке C - одним файлом\n" +
-		"<p>Архив с файлами по результатам выполнения задания вышлите со своего адреса почты @edu.mirea.ru(" + to + ", в копию письма добавлена ваша личная почта - будьте внимательны с личной почты задания приниматься не будут) " +
-		"ответным письмом на адрес отправителя этого письма  ДО 7 МАЯ 2020 года. В теме письма укажите «АПСУ Экзамен», также, в теле письма укажите дополнительно Ф.И.О.(" + username + "), группу(" + group + ").\n" +
-		"<p>Решенные задания, полученные позже указанной даты, проверяться не будут.\n" +
-		"<p>Результат проверки задания будет доведен до вас до начала сессии.\n\n<p><p>С уважением,\n<br>администрация кафедры промышленной информатики (ПИ)\n" +
+		"<p>Добрый день " + username + ".</p>" +
+		"<p>&nbsp;</p>" +
+		"<p>Вы получили это письмо, так как имеете задолженность по дисциплине " + WokName + ". Если вы уже получили оценку по дисциплине, проигнорируйте это письмо.</p>" +
+		"<p>К письму прилагается задание, выполнение которого требуется для сдачи дисциплины.</p>" +
+		"<p>Выполните прилагаемое задание в рукописном виде(на листке должно быть указано Ф.И.О.(" + username + "), группа(" + group + "), задания) и пришлите фотографию, практическую часть задания следует оформить в виде кода на языке C - одним файлом</p>" +
+		"<p>Архив с файлами по результатам выполнения задания вышлите со своего адреса почты @edu.mirea.ru(" + to + ", в копию письма добавлена ваша личная почта - <strong><span style=\"color: #ff0000;\">будьте внимательны с личной почты задания приниматься не будут</span></strong>) " +
+		"ответным письмом на адрес отправителя этого письма  <strong><span style=\"color: #ff0000;\">ДО 27 МАЯ 2020 года</span></strong>. В теме письма укажите «" + WokShortName + " Экзамен», также, в теле письма укажите дополнительно Ф.И.О.(" + username + "), группу(" + group + ").</p>" +
+		"<p><strong><span style=\"color: #ff0000;\">Решенные задания, полученные позже указанной даты, проверяться не будут.</span></strong></p>" +
+		"<p>Результат проверки будет доведен до вас до начала сессии.\n\n<p>С уважением,</p><p>&nbsp; &nbsp; &nbsp;администрация кафедры промышленной информатики (ПИ)</p>" +
+		"</body></html>\r\n"
+}
+
+func GetMessageForCourse(username string, group string, to string) string {
+	return "<html><body>" +
+		"<p>Добрый день " + username + ".</p>" +
+		"<p>&nbsp;</p>" +
+		"<p>Вы получили это письмо, так как имеете задолженность по дисциплине " + WokName + " курсовая работа.</p>" +
+		"<p>Архив с курсовой работой вышлите со своего адреса почты @edu.mirea.ru(" + to + ", в копию письма добавлена ваша личная почта - <strong><span style=\"color: #ff0000;\">будьте внимательны с личной почты задания приниматься не будут</span></strong>) " +
+		"ответным письмом на адрес отправителя этого письма  <strong><span style=\"color: #ff0000;\">ДО 15 МАЯ 2020 года</span></strong>, т.е. 14 МАЯ 2020 года работы не будут приниматься к рассмотрению. В теме письма укажите «" + WokShortName + " Курсовая», также, в теле письма укажите дополнительно Ф.И.О.(" + username + "), группу(" + group + ").</p>" +
+		"<p>Если вы не получали задания ранее, отошлите письмо (с требованиями указанными выше) и в теле письма напишите, что задание вам не выдавалось. </p>" +
+		"<p><strong><span style=\"color: #ff0000;\">Курсовые работы, полученные позже указанной даты, проверяться не будут.</span></strong> В деканат, результаты будут переданы 15 МАЯ 2020 года.</p>" +
+		"<p>Результат проверки будет доведен до вас до начала сессии.\n\n<p>С уважением,</p><p>&nbsp; &nbsp; &nbsp;администрация кафедры промышленной информатики (ПИ)</p>" +
 		"</body></html>\r\n"
 }
 
@@ -153,8 +191,9 @@ func main() {
 		email := strings.TrimSpace(parts[1])
 		emailCopy := strings.TrimSpace(parts[2])
 		group := strings.TrimSpace(parts[4])
-		send2(username, group, email, emailCopy, fmt.Sprintf("%d.docx", i))
-		log.Printf("'%s', '%s', '%s', '%d.docx'", username, group, email, i)
+		sendExercise(username, group, email, emailCopy, fmt.Sprintf("%d.docx", i))
+		//sendCourse(username, group, email, emailCopy)
+		log.Printf("'%s', '%s', '%s'('%s'), '%d.docx'", username, group, email, emailCopy, i)
 		i++
 		time.Sleep(5 * time.Second)
 	}
