@@ -19,9 +19,9 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
     private val client = OkHttpClient.Builder()
-        .callTimeout(120, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
-        .writeTimeout(120, TimeUnit.SECONDS)
+        .callTimeout(240, TimeUnit.SECONDS)
+        .readTimeout(240, TimeUnit.SECONDS)
+        .writeTimeout(240, TimeUnit.SECONDS)
         .build()
     private val longPoll = LongPoll(client, object : EventNotify {
         override fun onEvent(eventsText: String) {
@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity() {
         val editor = preferences.edit()
         editor.putString(URL_KEY, url)
         editor.apply()
-        longPoll.execute("$url?timeout=45&category=sms")
+        longPoll.execute("$url?timeout=120&category=sms")
         button.isEnabled = false
     }
 
