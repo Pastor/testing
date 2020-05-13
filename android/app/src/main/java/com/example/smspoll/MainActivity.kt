@@ -23,19 +23,27 @@ class MainActivity : AppCompatActivity() {
         .readTimeout(240, TimeUnit.SECONDS)
         .writeTimeout(240, TimeUnit.SECONDS)
         .build()
-    private val longPoll = LongPoll(client, object : EventNotify {
-        override fun onEvent(eventsText: String) {
-            val receive = JSONObject(eventsText)
-            if (receive.has("events")) {
-                val events = receive.getJSONArray("events")
-                for (i in 0 until events.length()) {
-                    val event = events.getJSONObject(i)
-                    val smsData = event.getJSONObject("data")
-                    sms(smsData.getString("to"), smsData.getString("text"))
+    private var longPoll = createLongPoll()
+
+    private fun createLongPoll(): LongPoll {
+        return LongPoll(client, object : EventNotify {
+            override fun onEvent(eventsText: String) {
+                val receive = JSONObject(eventsText)
+                if (receive.has("events")) {
+                    val events = receive.getJSONArray("events")
+                    for (i in 0 until events.length()) {
+                        val event = events.getJSONObject(i)
+                        val smsData = event.getJSONObject("data")
+                        sms(smsData.getString("to"), smsData.getString("text"))
+                    }
                 }
             }
-        }
-    })
+
+            override fun onException(ex: Exception) {
+                errorMessage(ex)
+            }
+        })
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +65,8 @@ class MainActivity : AppCompatActivity() {
         val editor = preferences.edit()
         editor.putString(URL_KEY, url)
         editor.apply()
+        longPoll.cancel(true)
+        longPoll = createLongPoll()
         longPoll.execute("$url?timeout=120&category=sms")
         button.isEnabled = false
     }
@@ -66,26 +76,35 @@ class MainActivity : AppCompatActivity() {
             val smsManager: SmsManager = SmsManager.getDefault()
             smsManager.sendTextMessage(phoneNo, null, msg, null, null)
         } catch (ex: Exception) {
-            object : Handler(Looper.getMainLooper()) {
-                override fun handleMessage(msg: Message?) {
-                    Toast.makeText(
-                        applicationContext, "Ошибка отправки: " + ex.localizedMessage,
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }.sendEmptyMessage(0)
+            errorMessage(ex)
         }
+    }
+
+    private fun errorMessage(ex: Exception) {
+        object : Handler(Looper.getMainLooper()) {
+            override fun handleMessage(msg: Message?) {
+                Toast.makeText(
+                    applicationContext, "Ошибка отправки: " + ex.localizedMessage,
+                    Toast.LENGTH_LONG
+                ).show()
+                findViewById<Button>(R.id.btnConnect).isEnabled = true
+            }
+        }.sendEmptyMessage(0)
     }
 
     class LongPoll(private val client: OkHttpClient, private val eventNotify: EventNotify) :
         AsyncTask<String, Response, Unit>() {
         override fun doInBackground(vararg params: String?) {
-            while (!isCancelled) {
-                val url = params[0]
-                val request =
-                    Request.Builder().url(url!!).post(ByteArray(0).toRequestBody()).build()
-                val execute = client.newCall(request).execute()
-                onProgressUpdate(execute)
+            try {
+                while (!isCancelled) {
+                    val url = params[0]
+                    val request =
+                        Request.Builder().url(url!!).post(ByteArray(0).toRequestBody()).build()
+                    val execute = client.newCall(request).execute()
+                    onProgressUpdate(execute)
+                }
+            } catch (ex: Exception) {
+                eventNotify.onException(ex)
             }
         }
 
@@ -107,6 +126,7 @@ class MainActivity : AppCompatActivity() {
 
     interface EventNotify {
         fun onEvent(eventsText: String)
+        fun onException(ex: Exception)
     }
 
     companion object {
