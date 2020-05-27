@@ -45,6 +45,21 @@ func write(message string) {
 	_, _ = fmt.Fprintln(f, fmt.Sprintf("[%v] %v", time.Now(), message))
 }
 
+func sendNotify(username, group, to string, toCopy string, filename string) {
+	m := gomail.NewMessage()
+	m.SetHeader("From", FromAddress)
+	m.SetHeader("To", to, toCopy)
+	m.SetHeader("Cc", m.FormatAddress("viruszold@gmail.com", "Хлебников Андрей Александрович"))
+	m.SetHeader("Subject", Subject)
+	m.SetBody("text/html", GetMessageForNotify(username, group, to))
+
+	d := gomail.NewDialer(ServerAddress, PortNumber, FromAddress, os.Getenv("EMAIL_PASSWORD"))
+	if err := d.DialAndSend(m); err != nil {
+		log.Panic(err)
+	}
+	write(fmt.Sprintf("Ф.И.О.: %s, Группа: %s, Задание: %s", username, group, filename))
+}
+
 func sendExercise(username, group, to string, toCopy string, filename string) {
 	m := gomail.NewMessage()
 	m.SetHeader("From", FromAddress)
@@ -148,11 +163,11 @@ func GetMessageForExercise(username string, group string, to string) string {
 		"<p>Добрый день " + username + ".</p>" +
 		"<p>&nbsp;</p>" +
 		"<p>Вы получили это письмо, так как имеете задолженность по дисциплине " + WokName + ". Если вы уже получили оценку по дисциплине, проигнорируйте это письмо.</p>" +
-		"<p>К письму прилагается задание, выполнение которого требуется для сдачи дисциплины.</p>" +
-		"<p>Выполните прилагаемое задание в рукописном виде(на листке должно быть указано Ф.И.О.(" + username + "), группа(" + group + "), задания) и пришлите фотографию, практическую часть задания следует оформить в виде кода на языке C - одним файлом</p>" +
-		"<p>Архив с файлами по результатам выполнения задания вышлите со своего адреса почты @edu.mirea.ru(" + to + ", в копию письма добавлена ваша личная почта - <strong><span style=\"color: #ff0000;\">будьте внимательны с личной почты задания приниматься не будут</span></strong>) " +
-		"ответным письмом на адрес отправителя этого письма  <strong><span style=\"color: #ff0000;\">ДО 27 МАЯ 2020 года</span></strong>. В теме письма укажите «" + WokShortName + " Экзамен», также, в теле письма укажите дополнительно Ф.И.О.(" + username + "), группу(" + group + ").</p>" +
-		"<p><strong><span style=\"color: #ff0000;\">Решенные задания, полученные позже указанной даты, проверяться не будут.</span></strong></p>" +
+		"<p>К письму прилагается задание, выполнение которого требуется для сдачи дисциплины. На выполнение задания отводится 6 часов.</p>" +
+		"<p>Выполните прилагаемое задание в рукописном виде(на листке должно быть указано Ф.И.О.(" + username + "), группа(" + group + "), текст задания) и пришлите фотографию, практическую часть задания следует оформить в виде кода на языке C - одним файлом.</p>" +
+		"<p>Архив с файлами(фотографии, файл с исходным кодом) по результатам выполнения задания вышлите со своего адреса почты @edu.mirea.ru(" + to + ", в копию письма добавлена ваша личная почта - <strong><span style=\"color: #ff0000;\">будьте внимательны с личной почты задания приниматься не будут</span></strong>) " +
+		"ответным письмом на адрес отправителя этого письма  <strong><span style=\"color: #ff0000;\">ДО 16:00 27 МАЯ 2020 года</span></strong>. В теме письма укажите «" + WokShortName + " Экзамен», также, в теле письма укажите дополнительно Ф.И.О.(" + username + "), группу(" + group + ").</p>" +
+		"<p><strong><span style=\"color: #ff0000;\">Решенные задания, полученные позже указанного времени и даты или не соответствующие требованиям указанным в этом письме, проверяться не будут. Если вы не сдавали курсовую работу по " + WokName + " экзамен не будет засчитан, даже при удачной сдаче.</span></strong></p>" +
 		"<p>Результат проверки будет доведен до вас до начала сессии.\n\n<p>С уважением,</p><p>&nbsp; &nbsp; &nbsp;администрация кафедры промышленной информатики (ПИ)</p>" +
 		"</body></html>\r\n"
 }
@@ -167,6 +182,21 @@ func GetMessageForCourse(username string, group string, to string) string {
 		"<p>Если вы не получали задания ранее, отошлите письмо (с требованиями указанными выше) и в теле письма напишите, что задание вам не выдавалось. </p>" +
 		"<p><strong><span style=\"color: #ff0000;\">Курсовые работы, полученные позже указанной даты, проверяться не будут.</span></strong> В деканат, результаты будут переданы 15 МАЯ 2020 года.</p>" +
 		"<p>Результат проверки будет доведен до вас до начала сессии.\n\n<p>С уважением,</p><p>&nbsp; &nbsp; &nbsp;администрация кафедры промышленной информатики (ПИ)</p>" +
+		"</body></html>\r\n"
+}
+
+func GetMessageForNotify(username string, group string, to string) string {
+	return "<html><body>" +
+		"<p>Добрый день " + username + ".</p>" +
+		"<p>&nbsp;</p>" +
+		"<p>Вы получили это письмо, так как имеете задолженность по дисциплине " + WokName + " экзамен.</p>" +
+		"<p><strong><span style=\"color: #ff0000;\">27 мая 2020 года будет происходить переэкзаменовка по дисциплине.</span></strong> </p>" +
+		"<p>Утром, 27 числа вам будет выслано задание на почту \"" + to + "\". Время на выполнение работы ~ 4 - 5 часов. Просьба подготовится к сдаче и присутствовать за компьютером.</p>" +
+		"<p>В случае невозможности участия в переэкзаменовке, просьба оповестить заранее. О времени пересдач в другие дни, пока не известно.</p>" +
+		"<p>Если вы уже сдавали экзамен и получили оценку просьба проигнорировать письмо.</p>" +
+		"<p><strong><span style=\"color: #ff0000;\">Любые вопросы по пересдаче присылайте со своей электронной почты(" + to + "), в теме письма указывайте \"РПП Экзамен\". " +
+		"На письма не соответствующие данным требованиям ответа вы не получите.</span></strong></p>" +
+		"<p>С уважением,</p><p>&nbsp; &nbsp; &nbsp;администрация кафедры промышленной информатики (ПИ)</p>" +
 		"</body></html>\r\n"
 }
 
@@ -191,9 +221,11 @@ func main() {
 		email := strings.TrimSpace(parts[1])
 		emailCopy := strings.TrimSpace(parts[2])
 		group := strings.TrimSpace(parts[4])
-		sendExercise(username, group, email, emailCopy, fmt.Sprintf("%d.docx", i))
+		n := (i % 29) + 1
+		//sendNotify(username, group, email, emailCopy, fmt.Sprintf("%d.docx", n))
+		sendExercise(username, group, email, emailCopy, fmt.Sprintf("%d.docx", n))
 		//sendCourse(username, group, email, emailCopy)
-		log.Printf("'%s', '%s', '%s'('%s'), '%d.docx'", username, group, email, emailCopy, i)
+		log.Printf("'%s', '%s', '%s'('%s'), '%d.docx'", username, group, email, emailCopy, n)
 		i++
 		time.Sleep(5 * time.Second)
 	}
