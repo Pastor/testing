@@ -1,4 +1,101 @@
-EESchema Schematic File Version 2
-EELAYER 25 0
+EESchema Schematic File Version 4
+EELAYER 30 0
 EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L CPU:Z80CPU U?
+U 1 1 5EDC1EEA
+P 5450 3150
+F 0 "U?" H 5450 4831 50  0000 C CNN
+F 1 "Z80CPU" H 5450 4740 50  0000 C CNN
+F 2 "" H 5450 3550 50  0001 C CNN
+F 3 "www.zilog.com/manage_directlink.php?filepath=docs/z80/um0080" H 5450 3550 50  0001 C CNN
+	1    5450 3150
+	1    0    0    -1  
+$EndComp
+$Comp
+L 4xxx:HEF4093B U?
+U 1 1 5EDC22C6
+P 2550 2250
+F 0 "U?" H 2550 2575 50  0000 C CNN
+F 1 "HEF4093B" H 2550 2484 50  0000 C CNN
+F 2 "" H 2550 2250 50  0001 C CNN
+F 3 "https://assets.nexperia.com/documents/data-sheet/HEF4093B.pdf" H 2550 2250 50  0001 C CNN
+	1    2550 2250
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C_Small C?
+U 1 1 5EDD1837
+P 2250 2750
+F 0 "C?" H 2342 2796 50  0000 L CNN
+F 1 "C_Small" H 2342 2705 50  0000 L CNN
+F 2 "" H 2250 2750 50  0001 C CNN
+F 3 "~" H 2250 2750 50  0001 C CNN
+	1    2250 2750
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C_Small C?
+U 1 1 5EDD3080
+P 5400 1200
+F 0 "C?" H 5492 1246 50  0000 L CNN
+F 1 "C_Small" H 5492 1155 50  0000 L CNN
+F 2 "" H 5400 1200 50  0001 C CNN
+F 3 "~" H 5400 1200 50  0001 C CNN
+	1    5400 1200
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R_Small R?
+U 1 1 5EDD4875
+P 2600 2650
+F 0 "R?" V 2404 2650 50  0000 C CNN
+F 1 "R_Small" V 2495 2650 50  0000 C CNN
+F 2 "" H 2600 2650 50  0001 C CNN
+F 3 "~" H 2600 2650 50  0001 C CNN
+	1    2600 2650
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	2250 2150 2250 2350
+Connection ~ 2250 2350
+$Comp
+L power:GND #PWR?
+U 1 1 5EDD8062
+P 2250 2850
+F 0 "#PWR?" H 2250 2600 50  0001 C CNN
+F 1 "GND" H 2255 2677 50  0000 C CNN
+F 2 "" H 2250 2850 50  0001 C CNN
+F 3 "" H 2250 2850 50  0001 C CNN
+	1    2250 2850
+	1    0    0    -1  
+$EndComp
+Text GLabel 4750 2250 0    50   Input ~ 0
+CLK
+Text GLabel 3100 2250 2    50   Input ~ 0
+CLK
+Wire Wire Line
+	2850 2250 3100 2250
+Connection ~ 2850 2250
+Wire Wire Line
+	2250 2350 2250 2650
+Wire Wire Line
+	2700 2650 2850 2650
+Wire Wire Line
+	2850 2250 2850 2650
+Wire Wire Line
+	2500 2650 2250 2650
+Connection ~ 2250 2650
 $EndSCHEMATC
