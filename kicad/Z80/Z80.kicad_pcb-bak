@@ -2,7 +2,7 @@
 
   (general
     (thickness 1.6)
-    (drawings 14)
+    (drawings 13)
     (tracks 55)
     (zones 0)
     (modules 26)
@@ -91,7 +91,7 @@
       (mirror false)
       (drillshape 0)
       (scaleselection 1)
-      (outputdirectory "gerber/"))
+      (outputdirectory "assembly/"))
   )
 
   (net 0 "")
@@ -1256,9 +1256,6 @@
     )
   )
 
-  (gr_text JLCJLCJLCJLC (at 46.736 84.328) (layer B.SilkS)
-    (effects (font (size 1 1) (thickness 0.15)) (justify mirror))
-  )
   (gr_text GND (at 57.912 93.98) (layer F.SilkS) (tstamp 5EDDB51E)
     (effects (font (size 1 1) (thickness 0.15)))
   )
@@ -1339,7 +1336,7 @@
   (segment (start 54.864 64.135) (end 58.80838 64.135) (width 0.5) (layer F.Cu) (net 18))
   (segment (start 59.69 71.755) (end 54.864 71.755) (width 0.5) (layer F.Cu) (net 19))
 
-  (zone (net 1) (net_name GND) (layer F.Cu) (tstamp 5EDDB524) (hatch edge 0.508)
+  (zone (net 1) (net_name GND) (layer F.Cu) (tstamp 5EDDB4DE) (hatch edge 0.508)
     (connect_pads (clearance 0.508))
     (min_thickness 0.254)
     (fill yes (arc_segments 32) (thermal_gap 0.508) (thermal_bridge_width 0.508))
