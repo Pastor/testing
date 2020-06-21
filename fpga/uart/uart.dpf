@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<pin_planner>
+	<pin_info>
+		<pin name="altera_reserved_lai_0_0" source="Pin Planner" >
+		</pin>
+		<pin name="altera_reserved_lai_0_1" source="Pin Planner" >
+		</pin>
+		<pin name="altera_reserved_lai_0_2" source="Pin Planner" >
+		</pin>
+		<pin name="altera_reserved_lai_0_3" source="Pin Planner" >
+		</pin>
+		<pin name="altera_reserved_lai_0_4" source="Pin Planner" >
+		</pin>
+		<pin name="altera_reserved_lai_0_5" source="Pin Planner" >
+		</pin>
+		<pin name="altera_reserved_lai_0_6" source="Pin Planner" >
+		</pin>
+		<pin name="altera_reserved_lai_0_7" source="Pin Planner" >
+		</pin>
+	</pin_info>
+	<buses>
+	</buses>
+	<group_file_association>
+	</group_file_association>
+	<pin_planner_file_specifies>
+	</pin_planner_file_specifies>
+</pin_planner>

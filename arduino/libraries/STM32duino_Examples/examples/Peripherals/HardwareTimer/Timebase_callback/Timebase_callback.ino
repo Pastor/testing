@@ -5,13 +5,17 @@
   Once configured, there is only CPU load for callbacks executions.
 */
 
+#if !defined(STM32_CORE_VERSION) || (STM32_CORE_VERSION  < 0x01090000)
+#error "Due to API change, this sketch is compatible with STM32_CORE_VERSION  >= 0x01090000"
+#endif
+
 #if defined(LED_BUILTIN)
 #define pin  LED_BUILTIN
 #else
 #define pin  D2
 #endif
 
-void Update_IT_callback(HardwareTimer*)
+void Update_IT_callback(void)
 { // Toggle pin. 10hz toogle --> 5Hz PWM
   digitalWrite(pin, !digitalRead(pin));
 }
@@ -31,7 +35,6 @@ void setup()
   // configure pin in output mode
   pinMode(pin, OUTPUT);
 
-  MyTim->setMode(2, TIMER_OUTPUT_COMPARE);  // In our case, channekFalling is configured but not really used. Nevertheless it would be possible to attach a callback to channel compare match.
   MyTim->setOverflow(10, HERTZ_FORMAT); // 10 Hz
   MyTim->attachInterrupt(Update_IT_callback);
   MyTim->resume();

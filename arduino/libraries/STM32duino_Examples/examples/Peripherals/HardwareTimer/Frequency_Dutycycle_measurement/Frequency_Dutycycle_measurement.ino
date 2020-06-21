@@ -8,6 +8,15 @@
 
 */
 
+/*
+  Note: Please verify that for your board,'pin' used for PWM has HardwareTimer capability
+  This is specially true for F1 serie (BluePill, ...)
+*/
+
+#if !defined(STM32_CORE_VERSION) || (STM32_CORE_VERSION  < 0x01090000)
+#error "Due to API change, this sketch is compatible with STM32_CORE_VERSION  >= 0x01090000"
+#endif
+
 #define pin  D2
 
 uint32_t channelRising, channelFalling;
@@ -20,7 +29,7 @@ HardwareTimer *MyTim;
     @brief  Input capture interrupt callback : Compute frequency and dutycycle of input signal
 
 */
-void TIMINPUT_Capture_Rising_IT_callback(HardwareTimer*)
+void TIMINPUT_Capture_Rising_IT_callback(void)
 {
   CurrentCapture = MyTim->getCaptureCompare(channelRising);
   /* frequency computation */
@@ -42,7 +51,7 @@ void TIMINPUT_Capture_Rising_IT_callback(HardwareTimer*)
 
 /* In case of timer rollover, frequency is to low to be measured set values to 0
    To reduce minimum frequency, it is possible to increase prescaler. But this is at a cost of precision. */
-void Rollover_IT_callback(HardwareTimer*)
+void Rollover_IT_callback(void)
 {
   rolloverCompareCount++;
 
@@ -57,7 +66,7 @@ void Rollover_IT_callback(HardwareTimer*)
     @brief  Input capture interrupt callback : Compute frequency and dutycycle of input signal
 
 */
-void TIMINPUT_Capture_Falling_IT_callback(HardwareTimer*)
+void TIMINPUT_Capture_Falling_IT_callback(void)
 {
   /* prepare DutyCycle computation */
   CurrentCapture = MyTim->getCaptureCompare(channelFalling);

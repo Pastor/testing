@@ -1,4 +1,3 @@
-#pragma once
 // If we are not building for AVR architectures ignore PROGMEM
 #if defined(__AVR__)
 #include <avr/pgmspace.h>
@@ -29,6 +28,21 @@ Nokia_LCD::Nokia_LCD(const uint8_t clk_pin, const uint8_t din_pin,
       kDc_pin{dc_pin},
       kCe_pin{ce_pin},
       kRst_pin{rst_pin},
+      kBl_pin{255},
+      kUsingBacklight{false},
+      mX_cursor{0},
+      mY_cursor{0} {}
+
+Nokia_LCD::Nokia_LCD(const uint8_t clk_pin, const uint8_t din_pin,
+                     const uint8_t dc_pin, const uint8_t ce_pin,
+                     const uint8_t rst_pin, const uint8_t bl_pin)
+    : kClk_pin{clk_pin},
+      kDin_pin{din_pin},
+      kDc_pin{dc_pin},
+      kCe_pin{ce_pin},
+      kRst_pin{rst_pin},
+      kBl_pin{bl_pin},
+      kUsingBacklight{true},
       mX_cursor{0},
       mY_cursor{0} {}
 
@@ -38,6 +52,9 @@ void Nokia_LCD::begin() {
     pinMode(kDc_pin, OUTPUT);
     pinMode(kCe_pin, OUTPUT);
     pinMode(kRst_pin, OUTPUT);
+    if (kUsingBacklight) {
+        pinMode(kBl_pin, OUTPUT);
+    }
 
     // Reset the LCD to a known state
     digitalWrite(kRst_pin, LOW);
@@ -56,6 +73,19 @@ void Nokia_LCD::setContrast(uint8_t contrast) {
     sendCommand(0x21);             // Tell LCD that extended commands follow
     sendCommand(0x80 | contrast);  // Set LCD Vop (Contrast)
     sendCommand(0x20);             // Set display mode
+}
+
+void Nokia_LCD::setInverted(bool invert)
+{
+    mInverted = invert;
+}
+
+void Nokia_LCD::setBacklight(bool enabled)
+{
+    if (!kUsingBacklight) {
+        return;
+    }
+    digitalWrite(kBl_pin, enabled);
 }
 
 bool Nokia_LCD::setCursor(uint8_t x, uint8_t y) {
@@ -133,8 +163,10 @@ bool Nokia_LCD::printCharacter(const unsigned char character) {
         return mY_cursor == 0;
     }
 
-    return draw(Nokia_LCD_Fonts::kDefault_font[character - 0x20],
+    bool out_of_bounds = draw(Nokia_LCD_Fonts::kDefault_font[character - 0x20],
                 Nokia_LCD_Fonts::kColumns_per_character, true);
+    // Separate the characters with a vertical line so they don't appear too close to each other
+    return draw(Nokia_LCD_Fonts::space, 1, false) || out_of_bounds;
 }
 
 bool Nokia_LCD::draw(const unsigned char bitmap[],
@@ -144,6 +176,9 @@ bool Nokia_LCD::draw(const unsigned char bitmap[],
     for (unsigned int i = 0; i < bitmap_size; i++) {
         unsigned char pixel =
             read_from_progmem ? pgm_read_byte_near(bitmap + i) : bitmap[i];
+        if (mInverted) {
+            pixel = ~pixel;
+        }
         out_of_bounds = sendData(pixel) || out_of_bounds;
     }
 

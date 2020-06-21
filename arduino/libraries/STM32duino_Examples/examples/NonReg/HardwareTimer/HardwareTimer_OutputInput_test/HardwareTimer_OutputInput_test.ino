@@ -32,6 +32,11 @@
 /***************************************
 ** Defines
 ***************************************/
+#if !defined(STM32_CORE_VERSION) || (STM32_CORE_VERSION  < 0x01090000)
+#error "Due to API change, this sketch is compatible with STM32_CORE_VERSION  >= 0x01090000"
+#endif
+
+
 #if !defined(ARDUINO_NUCLEO_L476RG)
 #error "Sketch is applicable to NUCLEO_L476RG"
 #endif
@@ -102,23 +107,23 @@ uint32_t test_Status = PASSED;
 ** Interrupt callback
 ***************************************/
 /********    Output    *****/
-void output_Update_IT_callback(HardwareTimer *)
+void output_Update_IT_callback(void)
 {
   Output_Update++;
 }
 
-void Output_Compare1_IT_callback(HardwareTimer *)
+void Output_Compare1_IT_callback(void)
 {
   Output_Compare1++;
 }
 
-void Output_Compare2_IT_callback(HardwareTimer *)
+void Output_Compare2_IT_callback(void)
 {
   Output_Compare2++;
 }
 
 /********    Input 1   *****/
-void Input_Capture1_Rising_IT_callback(HardwareTimer *)
+void Input_Capture1_Rising_IT_callback(void)
 {
   Current1_Capture = MyTim_input->getCaptureCompare(Freq1_channelRising);
   /* frequency computation */
@@ -138,7 +143,7 @@ void Input_Capture1_Rising_IT_callback(HardwareTimer *)
   rolloverCompare1Count = 0;
 }
 
-void Input_Capture1_Falling_IT_callback(HardwareTimer *)
+void Input_Capture1_Falling_IT_callback(void)
 {
   /* prepare DutyCycle computation */
   Current1_Capture = MyTim_input->getCaptureCompare(Freq1_channelFalling);
@@ -155,7 +160,7 @@ void Input_Capture1_Falling_IT_callback(HardwareTimer *)
 }
 
 /********    Input 2   *****/
-void Input_Capture2_Rising_IT_callback(HardwareTimer *)
+void Input_Capture2_Rising_IT_callback(void)
 {
   Current2_Capture = MyTim_input->getCaptureCompare(Freq2_channelRising);
   /* frequency computation */
@@ -175,7 +180,7 @@ void Input_Capture2_Rising_IT_callback(HardwareTimer *)
   rolloverCompare2Count = 0;
 }
 
-void Input_Capture2_Falling_IT_callback(HardwareTimer *)
+void Input_Capture2_Falling_IT_callback(void)
 {
   /* prepare DutyCycle computation */
   Current2_Capture = MyTim_input->getCaptureCompare(Freq2_channelFalling);
@@ -194,7 +199,7 @@ void Input_Capture2_Falling_IT_callback(HardwareTimer *)
 /********    Input rollover   *****/
 /* In case of timer rollover, frequency is to low to be measured set values to 0
    To reduce minimum frequency, it is possible to increase prescaler. But this is at a cost of precision. */
-void Rollover_IT_callback(HardwareTimer *)
+void Rollover_IT_callback(void)
 {
   rolloverCompare1Count++;
   rolloverCompare2Count++;
@@ -373,6 +378,22 @@ void loop()
   delay(1000);
 
   /*********   Output test  ***/
+  test_step++;
+
+  MyTim_output->setOverflow((1000000 / OUTPUT_FREQUENCY), MICROSEC_FORMAT);
+  MyTim_output->attachInterrupt(output_Update_IT_callback);
+  MyTim_output->resume();
+  reset_interrupt_count();
+  Verify_output(1, 0, 0);
+  Verify_output(2, 0, 0);
+  Verify_output_interrupts(EXPECTED_INTERRUPT_COUNT, 0, 0);
+  test_step++;
+
+  MyTim_output->detachInterrupt();
+  reset_interrupt_count();
+  Verify_output(1, 0, 0);
+  Verify_output(2, 0, 0);
+  Verify_output_interrupts(0, 0, 0);
   test_step++;
 
   MyTim_output->setMode(Output1_channel, TIMER_OUTPUT_COMPARE_PWM1, TIM1_CH1N_PIN);

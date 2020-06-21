@@ -8,27 +8,36 @@
   Once configured, there is only CPU load for callbacks executions.
 */
 
-// 'pin' PWM will be mangaed automatically by hardware whereas 'pin2' PWM will be managed by software through interrupt callback
+/*
+  Note: Please verify that 'pin' used for PWM has HardwareTimer capability for your board
+  This is specially true for F1 serie (BluePill, ...)
+*/
+
+#if !defined(STM32_CORE_VERSION) || (STM32_CORE_VERSION  < 0x01090000)
+#error "Due to API change, this sketch is compatible with STM32_CORE_VERSION  >= 0x01090000"
+#endif
+
+// 'pin' PWM will be managed automatically by hardware whereas 'pin2' PWM will be managed by software through interrupt callback
 #if defined(LED_BUILTIN)
-#define pin  LED_BUILTIN
+  #define pin  LED_BUILTIN
 
-#if LED_BUILTIN == D3
-#error LED_BUILTIN == D3
+  #if LED_BUILTIN == D3
+    #define pin2  D2
+  #else
+    #define pin2  D3
+  #endif
+
 #else
-#define pin2  D3
+  #define pin   D2
+  #define pin2  D3
 #endif
 
-#else
-#define pin  D2
-#define pin2  D3
-#endif
-
-void Update_IT_callback(HardwareTimer*)
+void Update_IT_callback(void)
 { // Update event correspond to Rising edge of PWM when configured in PWM1 mode
   digitalWrite(pin2, LOW); // pin2 will be complementary to pin
 }
 
-void Compare_IT_callback(HardwareTimer*)
+void Compare_IT_callback(void)
 { // Compare match event correspond to falling edge of PWM when configured in PWM1 mode
   digitalWrite(pin2, HIGH);
 }
