@@ -45,6 +45,8 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -52,9 +54,10 @@ class MainActivity : AppCompatActivity() {
         val input = findViewById<TextView>(R.id.serverAddress)
         input.text =
             preferences.getString(URL_KEY, "http://192.168.2.177:8091/api/events")
+        connect(this.currentFocus)
     }
 
-    fun connect(view: View) {
+    fun connect(view: View?) {
         val button = findViewById<Button>(R.id.btnConnect)
         button.isEnabled = longPoll.isCancelled
         if (longPoll.status == AsyncTask.Status.RUNNING)

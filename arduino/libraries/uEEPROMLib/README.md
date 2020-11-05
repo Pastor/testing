@@ -8,6 +8,7 @@ I2C EEPROM library. Split from uRTCLib https://github.com/Naguissa/uRTCLib
 
 This library controls any I2C EEPROM, independent ones or incorporated on DS1307 or DS3231 RTCs.
 
+*Note: On ATTiny, you need TnyWireM library in order to compile. It's available on Library manager.
 
 ## How do I get set up? ##
 
@@ -25,7 +26,9 @@ For manual installation:
 
 You can find all documentation and extras in this repository: https://github.com/Naguissa/uEEPROMLib_doc_and_extras
 
-Due GitHub limitations HTML documentation is not avaliable online, you need to download the zip.
+You can read documentation online here: https://naguissa.github.io/uEEPROMLib_doc_and_extras/
+
+IMPORTANT NOTE: It's a little bit hidden, but you can set your EEPROM page size changing public variable uEEPROMLIBVariable.page_size
 
 
 
@@ -49,7 +52,8 @@ Included on example folder, available on Arduino IDE.
 Any code contribution, report or comment are always welcome. Don't hesitate to use GitHub for that.
 
 
-You can make a donation via PayPal: https://paypal.me/foroelectro
+ * You can sponsor this project using GitHub's Sponsor button: https://github.com/Naguissa/uEEPROMLib
+ * You can make a donation via PayPal: https://paypal.me/foroelectro
 
 
 Thanks for your support.
