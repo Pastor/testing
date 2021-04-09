@@ -1,29 +1,31 @@
 use bloom::BloomFilter;
-use std::borrow::BorrowMut;
+use std::cell::Cell;
 
-pub(crate) struct Cache<'a> {
-    filter: &'a mut BloomFilter,
+pub(crate) struct Cache {
+    filter: Cell<BloomFilter>,
 }
 
-impl<'a> Default for Cache<'a> {
+impl Default for Cache {
     fn default() -> Self {
         Cache::new(1000000, 0.01)
     }
 }
 
-impl<'a> Cache<'a> {
+impl Cache {
     fn new(expected_num_items: u32, false_positive_rate: f32) -> Self {
-        let mut filter = BloomFilter::with_rate(false_positive_rate, expected_num_items);
         Cache {
-            filter: filter.borrow_mut(),
+            filter: Cell::new(BloomFilter::with_rate(
+                false_positive_rate,
+                expected_num_items,
+            )),
         }
     }
 
-    fn contains(&self, value: i32) -> bool {
-        self.filter.contains(&value)
+    pub fn contains(&mut self, value: i32) -> bool {
+        self.filter.get_mut().contains(&value)
     }
 
-    fn store(&mut self, value: i32) {
-        self.filter.insert(&value)
+    pub fn store(&mut self, value: i32) {
+        self.filter.get_mut().insert(&value)
     }
 }

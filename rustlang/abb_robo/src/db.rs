@@ -2,10 +2,11 @@ use diesel::prelude::*;
 use dotenv::dotenv;
 use std::env;
 
-pub use crate::cache::*;
+use crate::cache::Cache;
 pub use crate::models::*;
 use crate::schema::users::columns::id;
 pub use crate::schema::*;
+use std::cell::Cell;
 
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();
@@ -17,29 +18,32 @@ pub fn establish_connection() -> SqliteConnection {
         .unwrap_or_else(|e| panic!("Error connecting to {}: {:?}", database_url, e))
 }
 
-pub struct Db<'a> {
+pub struct Db {
     connection: SqliteConnection,
-    user_cache: Cache<'a>,
+    user_cache: Cell<Cache>,
 }
 
-impl<'a> Db<'a> {
+impl Db {
     pub fn new() -> Self {
         Db {
             connection: establish_connection(),
-            user_cache: Cache::default(),
+            user_cache: Cell::new(Cache::default()),
         }
     }
 
-    pub fn add_user(&self, user: User) {
-        let ret = users::dsl::users
-            .filter(id.eq(user.id))
-            .select(id)
-            .first::<i32>(&self.connection);
-        if let Err(_) = ret {
-            diesel::insert_into(users::table)
-                .values(&user)
-                .execute(&self.connection)
-                .expect("Error saving new user");
+    pub fn add_user(&mut self, user: User) {
+        if !self.user_cache.get_mut().contains(user.id) {
+            let ret = users::dsl::users
+                .filter(id.eq(user.id))
+                .select(id)
+                .first::<i32>(&self.connection);
+            if let Err(_) = ret {
+                diesel::insert_into(users::table)
+                    .values(&user)
+                    .execute(&self.connection)
+                    .expect("Error saving new user");
+            }
+            self.user_cache.get_mut().store(user.id)
         }
     }
 }

@@ -1,6 +1,5 @@
 use serde::de::{Deserialize, Deserializer, Error};
 
-use crate::models::*;
 use crate::schema::*;
 
 #[derive(
