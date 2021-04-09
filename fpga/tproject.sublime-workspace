@@ -7,6 +7,36 @@
 	},
 	"buffers":
 	[
+		{
+			"file": "tproject/counter.v",
+			"settings":
+			{
+				"buffer_size": 297,
+				"encoding": "UTF-8",
+				"line_ending": "Unix",
+				"name": "module counter(out, clk, reset);"
+			}
+		},
+		{
+			"file": "tproject/counter_tb.v",
+			"settings":
+			{
+				"buffer_size": 486,
+				"encoding": "UTF-8",
+				"line_ending": "Unix",
+				"name": "module test;"
+			}
+		},
+		{
+			"file": "tproject/Makefile",
+			"settings":
+			{
+				"buffer_size": 393,
+				"encoding": "UTF-8",
+				"line_ending": "Unix",
+				"name": "PROJ = SimpleCounter"
+			}
+		}
 	],
 	"build_system": "",
 	"build_system_choices":
@@ -19,6 +49,10 @@
 		"last_filter": "",
 		"selected_items":
 		[
+			[
+				"Install",
+				"Package Control: Install Package"
+			],
 			[
 				"insta",
 				"Package Control: Install Package"
@@ -58,8 +92,17 @@
 		"side_bar_visible": false,
 		"status_bar_visible": false
 	},
+	"expanded_folders":
+	[
+		"/Users/pastor/github/testing/fpga/tproject"
+	],
 	"file_history":
 	[
+		"/Users/pastor/keycloak-11.0.3/standalone/configuration/standalone.xml",
+		"/Users/pastor/github/testing/fpga/tproject.sublime-project",
+		"/Users/pastor/github/testing/fpga/tproject/SimpleCounter.vvp",
+		"/Users/pastor/github/testing/fpga/tproject/SimpleCounter_logs.txt",
+		"/Users/pastor/github/testing/fpga/tproject/io_signals.vcd",
 		"/Users/pastor/Library/Application Support/Sublime Text 3/Packages/User/Preferences.sublime-settings",
 		"/Users/pastor/Library/Application Support/Sublime Text 3/Packages/Default/Preferences.sublime-settings"
 	],
@@ -96,8 +139,100 @@
 	"groups":
 	[
 		{
+			"selected": 0,
 			"sheets":
 			[
+				{
+					"buffer": 0,
+					"file": "tproject/counter.v",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 297,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								297,
+								297
+							]
+						],
+						"settings":
+						{
+							"auto_name": "module counter(out, clk, reset);",
+							"syntax": "Packages/SystemVerilog/SystemVerilog.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "tproject/counter_tb.v",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 486,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								474,
+								474
+							]
+						],
+						"settings":
+						{
+							"auto_name": "module test;",
+							"syntax": "Packages/SystemVerilog/SystemVerilog.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "tproject/Makefile",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 393,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								89,
+								102
+							]
+						],
+						"settings":
+						{
+							"auto_name": "PROJ = SimpleCounter",
+							"syntax": "Packages/Makefile/Makefile.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				}
 			]
 		}
 	],
