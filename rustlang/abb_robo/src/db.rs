@@ -6,7 +6,7 @@ use crate::cache::Cache;
 pub use crate::models::*;
 use crate::schema::users::columns::id;
 pub use crate::schema::*;
-use std::cell::Cell;
+use std::cell::RefCell;
 
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();
@@ -20,14 +20,14 @@ pub fn establish_connection() -> SqliteConnection {
 
 pub struct Db {
     connection: SqliteConnection,
-    user_cache: Cell<Cache>,
+    user_cache: RefCell<Cache>,
 }
 
 impl Db {
     pub fn new() -> Self {
         Db {
             connection: establish_connection(),
-            user_cache: Cell::new(Cache::default()),
+            user_cache: RefCell::new(Cache::default()),
         }
     }
 

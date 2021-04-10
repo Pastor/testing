@@ -1,8 +1,8 @@
 use bloom::BloomFilter;
-use std::cell::Cell;
+use std::cell::RefCell;
 
 pub(crate) struct Cache {
-    filter: Cell<BloomFilter>,
+    filter: RefCell<BloomFilter>,
 }
 
 impl Default for Cache {
@@ -14,7 +14,7 @@ impl Default for Cache {
 impl Cache {
     fn new(expected_num_items: u32, false_positive_rate: f32) -> Self {
         Cache {
-            filter: Cell::new(BloomFilter::with_rate(
+            filter: RefCell::new(BloomFilter::with_rate(
                 false_positive_rate,
                 expected_num_items,
             )),

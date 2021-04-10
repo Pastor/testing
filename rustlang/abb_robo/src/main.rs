@@ -3,6 +3,7 @@ extern crate diesel;
 #[macro_use]
 extern crate serde_derive;
 extern crate bloom;
+extern crate hyper;
 extern crate serde_json;
 
 use std::env;
@@ -14,6 +15,7 @@ use telegram_bot::{Api, Error, Integer, Message, MessageKind, ParseMode, UpdateK
 use tokio::time::sleep;
 use tracing::Level;
 
+pub mod abb;
 pub mod cache;
 pub mod db;
 pub mod models;
@@ -158,6 +160,9 @@ async fn main() -> Result<(), Error> {
 
     let api = Api::new(token);
     let mut stream = api.stream();
+
+    let mut abb = abb::Api::default();
+    let users = abb.users().unwrap();
 
     while let Some(update) = stream.next().await {
         let update = update?;
