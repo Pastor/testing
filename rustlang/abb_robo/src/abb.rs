@@ -10,6 +10,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 const APPLICATION_JSON: &'static str = "application/json;charset=utf-8";
+const APPLICATION_HAL_JSON: &'static str = "application/hal+json;v=2.0";
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -84,17 +85,19 @@ impl Api {
             .method(method)
             .uri(self.url.clone())
             .header(CONTENT_TYPE, HeaderValue::from_static(APPLICATION_JSON))
-            .header(USER_AGENT, HeaderValue::from_static("abb_robo v1"))
-            .header(ACCEPT, HeaderValue::from_static(APPLICATION_JSON));
-        if self.cookie.is_some() {
-            request = request.header(COOKIE, self.cookie.as_ref().unwrap());
-        } else {
-            let credentials = Credentials::new(
-                self.username.clone().as_str(),
-                self.password.clone().as_str(),
-            );
-            let credentials = credentials.as_http_header();
-            request = request.header(AUTHORIZATION, credentials);
+            .header(USER_AGENT, HeaderValue::from_static("abb-robo_v1"))
+            .header(ACCEPT, HeaderValue::from_static(APPLICATION_HAL_JSON));
+
+        match self.cookie {
+            Some(ref value) => request = request.header(COOKIE, value),
+            None => {
+                let credentials = Credentials::new(
+                    self.username.clone().as_str(),
+                    self.password.clone().as_str(),
+                );
+                let credentials = credentials.as_http_header();
+                request = request.header(AUTHORIZATION, credentials)
+            }
         }
         let request = request.body(Body::empty())?;
 
