@@ -7,7 +7,7 @@ pub(crate) struct Cache {
 
 impl Default for Cache {
     fn default() -> Self {
-        Cache::new(1000000, 0.01)
+        Cache::new(10000000, 0.01)
     }
 }
 

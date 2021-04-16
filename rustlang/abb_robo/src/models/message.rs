@@ -2,16 +2,15 @@
 use serde::de::{Deserialize, Deserializer, Error};
 
 use crate::schema::*;
+use std::time::SystemTime;
 
 #[derive(
     Queryable, Insertable, Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Deserialize,
 )]
-#[table_name = "users"]
-pub struct User {
+#[table_name = "message_text"]
+pub struct Text {
     pub id: i32,
-    pub first_name: String,
-    pub last_name: Option<String>,
-    pub username: Option<String>,
-    pub is_bot: bool,
-    pub language_code: Option<String>,
+    pub created_at: SystemTime,
+    pub chat: Option<i32>,
+    pub data: Option<String>,
 }

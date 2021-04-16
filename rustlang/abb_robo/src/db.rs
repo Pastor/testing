@@ -4,38 +4,68 @@ use std::env;
 
 use crate::cache::Cache;
 pub use crate::models::*;
-use crate::schema::users::columns::id;
 pub use crate::schema::*;
 use std::cell::RefCell;
+use std::path::PathBuf;
 
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();
     let database_url = match env::var("DATABASE_URL") {
         Ok(val) => val,
-        Err(_) => String::from("~/telegram.db3"),
+        Err(_) => {
+            let home = match env::var("HOME") {
+                Ok(home) => home,
+                Err(_) => env::current_dir()
+                    .unwrap_or(PathBuf::from("~"))
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            };
+            let home = PathBuf::from(home);
+            let db = home.join("abb.db3");
+            db.to_str().unwrap().to_string()
+        }
     };
     SqliteConnection::establish(&database_url)
         .unwrap_or_else(|e| panic!("Error connecting to {}: {:?}", database_url, e))
 }
 
-pub struct Db {
+pub struct Database {
     connection: SqliteConnection,
     user_cache: RefCell<Cache>,
+    chat_cache: RefCell<Cache>,
 }
 
-impl Db {
+impl Database {
     pub fn new() -> Self {
-        Db {
+        Database {
             connection: establish_connection(),
             user_cache: RefCell::new(Cache::default()),
+            chat_cache: RefCell::new(Cache::default()),
+        }
+    }
+
+    pub fn add_chat(&mut self, chat: Chat) {
+        if !self.chat_cache.get_mut().contains(chat.id) {
+            let ret = chats::dsl::chats
+                .filter(chats::columns::id.eq(chat.id))
+                .select(chats::columns::id)
+                .first::<i32>(&self.connection);
+            if let Err(_) = ret {
+                diesel::insert_into(chats::table)
+                    .values(&chat)
+                    .execute(&self.connection)
+                    .expect("Error saving new user");
+            }
+            self.chat_cache.get_mut().store(chat.id)
         }
     }
 
     pub fn add_user(&mut self, user: User) {
         if !self.user_cache.get_mut().contains(user.id) {
             let ret = users::dsl::users
-                .filter(id.eq(user.id))
-                .select(id)
+                .filter(users::columns::id.eq(user.id))
+                .select(users::columns::id)
                 .first::<i32>(&self.connection);
             if let Err(_) = ret {
                 diesel::insert_into(users::table)

@@ -2,9 +2,13 @@
 extern crate diesel;
 #[macro_use]
 extern crate serde_derive;
+extern crate abbrws;
 extern crate bloom;
 extern crate hyper;
 extern crate serde_json;
+
+use structopt::clap::AppSettings;
+use structopt::StructOpt;
 
 use std::env;
 use std::time::Duration;
@@ -15,7 +19,6 @@ use telegram_bot::{Api, Error, Integer, Message, MessageKind, ParseMode, UpdateK
 use tokio::time::sleep;
 use tracing::Level;
 
-pub mod abb;
 pub mod cache;
 pub mod db;
 pub mod models;
@@ -23,6 +26,7 @@ pub mod schema;
 
 pub use crate::db::*;
 pub use crate::models::*;
+use futures::executor::block_on;
 
 async fn test_message(api: Api, message: Message) -> Result<(), Error> {
     api.send(message.text_reply("Simple message")).await?;
@@ -147,7 +151,7 @@ async fn test(api: Api, message: Message) -> Result<(), Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let mut db = Db::new();
+    let mut db = Database::new();
 
     let file_appender = tracing_appender::rolling::hourly("logs", "features.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
@@ -161,8 +165,21 @@ async fn main() -> Result<(), Error> {
     let api = Api::new(token);
     let mut stream = api.stream();
 
-    let mut abb = abb::Api::default();
-    let users = abb.users().unwrap();
+    let options = Options::from_args();
+
+    let connect = || {
+        abbrws::Client::new(&options.host, &options.user, &options.password)
+            .map_err(|e| format!("failed to connect to {:?}: {}", options.host, e))
+    };
+
+    let mut client: abbrws::Client = connect().unwrap();
+    let _ok = match block_on(client.login()) {
+        Ok(_) => match block_on(client.mastership_request()) {
+            Ok(_) => true,
+            _ => false,
+        },
+        _ => false,
+    };
 
     while let Some(update) = stream.next().await {
         let update = update?;
@@ -184,7 +201,14 @@ async fn main() -> Result<(), Error> {
                 tracing::info!("{:?}", message.clone());
             }
             UpdateKind::ChannelPost(post) => {
-                tracing::info!("{:?}", post)
+                tracing::info!("{:?}", post.clone());
+                let id: Integer = post.chat.id.into();
+                db.add_chat(Chat {
+                    id: id as i32,
+                    title: post.chat.title,
+                    username: post.chat.username,
+                    invite_link: post.chat.invite_link,
+                });
             }
             UpdateKind::EditedChannelPost(post) => {
                 tracing::info!("{:?}", post)
@@ -205,4 +229,27 @@ async fn main() -> Result<(), Error> {
         }
     }
     Ok(())
+}
+
+#[derive(StructOpt)]
+#[structopt(setting(AppSettings::DeriveDisplayOrder))]
+#[structopt(setting(AppSettings::ColoredHelp))]
+#[structopt(setting(AppSettings::UnifiedHelpMessage))]
+struct Options {
+    /// The host to connect to.
+    #[structopt(long, short)]
+    #[structopt(default_value = "127.0.0.1")]
+    host: String,
+
+    /// The user to authenticate as.
+    #[structopt(long, short)]
+    #[structopt(global = true)]
+    #[structopt(default_value = "Default User")]
+    user: String,
+
+    /// The password for the user.
+    #[structopt(long, short)]
+    #[structopt(global = true)]
+    #[structopt(default_value = "robotics")]
+    password: String,
 }

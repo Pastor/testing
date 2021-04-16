@@ -1,6 +1,6 @@
 [package]
 name = "abb_robo"
-version = "0.1.0"
+version = "0.1.12"
 authors = ["Pastor <viruszold@gmail.com>"]
 edition = "2018"
 
@@ -10,30 +10,35 @@ rustls = ["hyper-rustls"]
 default = ["openssl"]
 
 [dependencies]
-diesel = { version = "^1.4.4", features = ["sqlite", "numeric"] }
+diesel = { version = "^1.4.4", features = ["sqlite", "numeric", "chrono"] }
 dotenv = "^0.15.0"
-bytes = "1.0.1"
-tokio = { version = "1.2", features = ["fs", "rt"] }
+bytes = "^1.0.1"
+tokio = { version = "^1.2", features = ["fs", "rt"] }
 
 tracing = "^0.1.23"
 tracing-futures = "^0.2"
 tracing-appender = "^0.1"
 tracing-subscriber = "^0.2.15"
-multipart = { version = "0.17", default-features = false, features = ["client"] }
+multipart = { version = "^0.17", default-features = false, features = ["client"] }
 
-#telegram-bot-raw = { version = "0.9.0", path = "../raw" }
 telegram-bot = { version = "0.9.0", git = "https://github.com/Pastor/telegram-bot", branch = "features/new-update-types" }
 telegram-bot-raw = { version = "0.9.0", git = "https://github.com/Pastor/telegram-bot", branch = "features/new-update-types" }
+abbrws = { version = "0.1.0", git = "https://github.com/Pastor/abbrws-rs", branch = "features/up-dependencies" }
 
 hyper = { version = "^0.14", features = ["full"] }
 hyper-tls = { version = "^0.5", optional = true }
-futures = "0.3"
+futures = "^0.3"
 hyper-rustls = { version = "^0.22", optional = true }
 serde = "^1.0"
 serde_derive = "^1.0"
 serde_json = "^1.0"
 bloom = "^0.2.0"
 http-auth-basic = "^0.1.2"
+chrono = "^0.4"
+
+structopt = "^0.3.8"
+yansi = "^0.5.0"
+
 [dev-dependencies]
 
-tokio = { version = "1.2", features = ["macros", "time", "fs", "rt-multi-thread"] }
+tokio = { version = "^1.2", features = ["macros", "time", "fs", "rt-multi-thread"] }
