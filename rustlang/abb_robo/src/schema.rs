@@ -10,7 +10,9 @@ table! {
 table! {
     message_text (id) {
         id -> Integer,
-        created_at -> Timestamp,
+        external_id -> Integer,
+        created_at -> Integer,
+        creator -> Nullable<Integer>,
         chat -> Nullable<Integer>,
         data -> Nullable<Text>,
     }

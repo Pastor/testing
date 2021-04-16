@@ -18,8 +18,10 @@ CREATE TABLE chats
 
 CREATE TABLE message_text
 (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-    chat       INTEGER DEFAULT NULL,
-    data       TEXT    DEFAULT NULL
+    id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    external_id INTEGER NOT NULL,
+    created_at  INTEGER NOT NULL,
+    creator     INTEGER DEFAULT NULL,
+    chat        INTEGER DEFAULT NULL,
+    data        TEXT    DEFAULT NULL
 );

@@ -45,6 +45,13 @@ impl Database {
         }
     }
 
+    pub fn add_message_text(&mut self, message: MsgText) {
+        diesel::insert_into(message_text::table)
+            .values(&message)
+            .execute(&self.connection)
+            .expect("Error saving new user");
+    }
+
     pub fn add_chat(&mut self, chat: Chat) {
         if !self.chat_cache.get_mut().contains(chat.id) {
             let ret = chats::dsl::chats
@@ -55,7 +62,7 @@ impl Database {
                 diesel::insert_into(chats::table)
                     .values(&chat)
                     .execute(&self.connection)
-                    .expect("Error saving new user");
+                    .expect("Error saving new chat");
             }
             self.chat_cache.get_mut().store(chat.id)
         }

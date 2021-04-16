@@ -195,20 +195,66 @@ async fn main() -> Result<(), Error> {
                     is_bot: message.from.is_bot,
                     language_code: message.from.language_code,
                 });
+                let message_id: Integer = message.id.into();
+                match message.kind {
+                    MessageKind::Text { ref data, .. } => db.add_message_text(MsgText {
+                        id: None,
+                        external_id: message_id as i32,
+                        created_at: message.date as i32,
+                        data: Some(data.to_string()),
+                        creator: Some(id as i32),
+                        chat: None,
+                    }),
+                    _ => (),
+                }
             }
             UpdateKind::UpdateId(id) => tracing::info!("{}", id),
             UpdateKind::EditedMessage(message) => {
                 tracing::info!("{:?}", message.clone());
+                let id: Integer = message.from.id.into();
+                db.add_user(User {
+                    id: id as i32,
+                    first_name: message.from.first_name,
+                    last_name: message.from.last_name,
+                    username: message.from.username,
+                    is_bot: message.from.is_bot,
+                    language_code: message.from.language_code,
+                });
+                let message_id: Integer = message.id.into();
+                match message.kind {
+                    MessageKind::Text { ref data, .. } => db.add_message_text(MsgText {
+                        id: None,
+                        external_id: message_id as i32,
+                        created_at: message.date as i32,
+                        data: Some(data.to_string()),
+                        chat: None,
+                        creator: Some(id as i32),
+                    }),
+                    _ => (),
+                }
             }
             UpdateKind::ChannelPost(post) => {
                 tracing::info!("{:?}", post.clone());
-                let id: Integer = post.chat.id.into();
+                let channel = post.chat.clone();
+                let id: Integer = channel.id.into();
                 db.add_chat(Chat {
                     id: id as i32,
-                    title: post.chat.title,
-                    username: post.chat.username,
-                    invite_link: post.chat.invite_link,
+                    title: channel.title,
+                    username: channel.username,
+                    invite_link: channel.invite_link,
                 });
+                let message_id: Integer = post.id.into();
+                match post.kind {
+                    MessageKind::Text { ref data, .. } => db.add_message_text(MsgText {
+                        id: None,
+                        external_id: message_id as i32,
+                        created_at: post.date as i32,
+                        data: Some(data.to_string()),
+                        chat: Some(id as i32),
+                        creator: None,
+                    }),
+                    _ => (),
+                }
             }
             UpdateKind::EditedChannelPost(post) => {
                 tracing::info!("{:?}", post)
