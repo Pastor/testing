@@ -15,7 +15,7 @@ use std::time::Duration;
 
 use futures::StreamExt;
 use telegram_bot::prelude::*;
-use telegram_bot::{Api, Error, Integer, Message, MessageKind, ParseMode, UpdateKind};
+use telegram_bot::{Api, ChannelPost, Error, Integer, Message, MessageKind, ParseMode, UpdateKind};
 use tokio::time::sleep;
 use tracing::Level;
 
@@ -27,6 +27,7 @@ pub mod schema;
 pub use crate::db::*;
 pub use crate::models::*;
 use futures::executor::block_on;
+use telegram_bot_raw::MessageChat;
 
 async fn test_message(api: Api, message: Message) -> Result<(), Error> {
     api.send(message.text_reply("Simple message")).await?;
@@ -185,80 +186,13 @@ async fn main() -> Result<(), Error> {
         let update = update?;
         match update.kind {
             UpdateKind::Message(message) => {
-                let id: Integer = message.from.id.into();
                 test(api.clone(), message.clone()).await?;
-                db.add_user(User {
-                    id: id as i32,
-                    first_name: message.from.first_name,
-                    last_name: message.from.last_name,
-                    username: message.from.username,
-                    is_bot: message.from.is_bot,
-                    language_code: message.from.language_code,
-                });
-                let message_id: Integer = message.id.into();
-                match message.kind {
-                    MessageKind::Text { ref data, .. } => db.add_message_text(MsgText {
-                        id: None,
-                        external_id: message_id as i32,
-                        created_at: message.date as i32,
-                        data: Some(data.to_string()),
-                        creator: Some(id as i32),
-                        chat: None,
-                    }),
-                    _ => (),
-                }
+                recv_message(api.clone(), &mut db, message)
             }
             UpdateKind::UpdateId(id) => tracing::info!("{}", id),
-            UpdateKind::EditedMessage(message) => {
-                tracing::info!("{:?}", message.clone());
-                let id: Integer = message.from.id.into();
-                db.add_user(User {
-                    id: id as i32,
-                    first_name: message.from.first_name,
-                    last_name: message.from.last_name,
-                    username: message.from.username,
-                    is_bot: message.from.is_bot,
-                    language_code: message.from.language_code,
-                });
-                let message_id: Integer = message.id.into();
-                match message.kind {
-                    MessageKind::Text { ref data, .. } => db.add_message_text(MsgText {
-                        id: None,
-                        external_id: message_id as i32,
-                        created_at: message.date as i32,
-                        data: Some(data.to_string()),
-                        chat: None,
-                        creator: Some(id as i32),
-                    }),
-                    _ => (),
-                }
-            }
-            UpdateKind::ChannelPost(post) => {
-                tracing::info!("{:?}", post.clone());
-                let channel = post.chat.clone();
-                let id: Integer = channel.id.into();
-                db.add_chat(Chat {
-                    id: id as i32,
-                    title: channel.title,
-                    username: channel.username,
-                    invite_link: channel.invite_link,
-                });
-                let message_id: Integer = post.id.into();
-                match post.kind {
-                    MessageKind::Text { ref data, .. } => db.add_message_text(MsgText {
-                        id: None,
-                        external_id: message_id as i32,
-                        created_at: post.date as i32,
-                        data: Some(data.to_string()),
-                        chat: Some(id as i32),
-                        creator: None,
-                    }),
-                    _ => (),
-                }
-            }
-            UpdateKind::EditedChannelPost(post) => {
-                tracing::info!("{:?}", post)
-            }
+            UpdateKind::EditedMessage(message) => recv_message(api.clone(), &mut db, message),
+            UpdateKind::ChannelPost(post) => recv_post(api.clone(), &mut db, post),
+            UpdateKind::EditedChannelPost(post) => recv_post(api.clone(), &mut db, post),
             UpdateKind::InlineQuery(query) => tracing::info!("{:?}", query),
             UpdateKind::ChosenInlineResult(chosen) => {
                 tracing::info!("{:?}", chosen)
@@ -270,11 +204,78 @@ async fn main() -> Result<(), Error> {
             UpdateKind::PollAnswer(answer) => tracing::info!("{:?}", answer),
             UpdateKind::MyChatMember(member) => tracing::info!("{:?}", member),
             UpdateKind::ChatMember(member) => tracing::info!("{:?}", member),
-            UpdateKind::Error(error) => tracing::info!("{:?}", error),
-            UpdateKind::Unknown => tracing::info!("Unknown"),
+            UpdateKind::Error(error) => tracing::error!("{:?}", error),
+            UpdateKind::Unknown => tracing::error!("Unknown"),
         }
     }
     Ok(())
+}
+
+fn recv_message(api: Api, db: &mut Database, message: Message) {
+    tracing::info!("{:?}", message.clone());
+    let id: Integer = message.from.id.into();
+    db.add_user(User {
+        id: id as i32,
+        first_name: message.from.first_name,
+        last_name: message.from.last_name,
+        username: message.from.username,
+        is_bot: message.from.is_bot,
+        language_code: message.from.language_code,
+    });
+    let message_id: Integer = message.id.into();
+    match message.kind {
+        MessageKind::Text { ref data, .. } => db.add_message_text(MsgText {
+            id: None,
+            external_id: message_id as i32,
+            created_at: message.date as i32,
+            data: Some(data.to_string()),
+            chat: None,
+            creator: Some(id as i32),
+        }),
+        none => {
+            tracing::info!("{:#?}", none)
+        }
+    }
+
+    match message.chat {
+        MessageChat::Private(user) => {
+            db.add_user(User {
+                id: id as i32,
+                first_name: user.first_name,
+                last_name: user.last_name,
+                username: user.username,
+                is_bot: user.is_bot,
+                language_code: user.language_code,
+            });
+        }
+        MessageChat::Group(_) => {}
+        MessageChat::Supergroup(_) => {}
+        MessageChat::Unknown(_) => {}
+    }
+}
+
+fn recv_post(api: Api, db: &mut Database, post: ChannelPost) {
+    tracing::info!("{:?}", post.clone());
+    let channel = post.chat.clone();
+    let id: Integer = channel.id.into();
+    db.add_chat(Chat {
+        id: id as i32,
+        title: channel.title,
+        username: channel.username,
+        invite_link: channel.invite_link,
+    });
+    let message_id: Integer = post.id.into();
+    match post.kind {
+        MessageKind::Text { ref data, .. } => db.add_message_text(MsgText {
+            id: None,
+            external_id: message_id as i32,
+            created_at: post.date as i32,
+            data: Some(data.to_string()),
+            chat: Some(id as i32),
+            creator: None,
+        }),
+        _ => (),
+    }
 }
 
 #[derive(StructOpt)]
