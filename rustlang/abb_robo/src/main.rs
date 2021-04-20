@@ -10,8 +10,8 @@ extern crate serde_json;
 use structopt::clap::AppSettings;
 use structopt::StructOpt;
 
-use std::env;
 use std::time::Duration;
+use std::{env, panic};
 
 use futures::StreamExt;
 use telegram_bot::prelude::*;
@@ -26,7 +26,10 @@ pub mod schema;
 
 pub use crate::db::*;
 pub use crate::models::*;
+use abbrws::Client;
 use futures::executor::block_on;
+use std::panic::PanicInfo;
+use std::sync::{Arc, Mutex};
 use telegram_bot_raw::MessageChat;
 
 async fn test_message(api: Api, message: Message) -> Result<(), Error> {
@@ -174,9 +177,15 @@ async fn main() -> Result<(), Error> {
             .map_err(|e| format!("failed to connect to {:?}: {}", options.host, e))
     };
 
-    let mut client: abbrws::Client = connect().unwrap();
-    block_on(client.login()).unwrap();
-    block_on(client.mastership_request()).unwrap();
+    let client: Arc<Mutex<Client>> = Arc::new(Mutex::new(connect().unwrap()));
+    block_on(client.lock().unwrap().login()).unwrap();
+    block_on(client.lock().unwrap().mastership_request()).unwrap();
+
+    let cc = Arc::clone(&client);
+    panic::set_hook(Box::new(move |info: &PanicInfo| {
+        tracing::error!("{:?}", info);
+        block_on(cc.lock().unwrap().mastership_release()).unwrap();
+    }));
 
     while let Some(update) = stream.next().await {
         let update = update?;
@@ -204,7 +213,7 @@ async fn main() -> Result<(), Error> {
             UpdateKind::Unknown => tracing::error!("Unknown"),
         }
     }
-    block_on(client.mastership_release()).unwrap();
+    block_on(client.lock().unwrap().mastership_release()).unwrap();
     Ok(())
 }
 
