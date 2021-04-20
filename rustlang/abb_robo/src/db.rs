@@ -16,7 +16,7 @@ pub fn establish_connection() -> SqliteConnection {
             let home = match env::var("HOME") {
                 Ok(home) => home,
                 Err(_) => env::current_dir()
-                    .unwrap_or(PathBuf::from("~"))
+                    .unwrap_or_else(|_| PathBuf::from("~"))
                     .to_str()
                     .unwrap()
                     .to_string(),
@@ -36,15 +36,17 @@ pub struct Database {
     chat_cache: RefCell<Cache>,
 }
 
-impl Database {
-    pub fn new() -> Self {
+impl Default for Database {
+    fn default() -> Self {
         Database {
             connection: establish_connection(),
             user_cache: RefCell::new(Cache::default()),
             chat_cache: RefCell::new(Cache::default()),
         }
     }
+}
 
+impl Database {
     pub fn add_message_text(&mut self, message: MsgText) {
         diesel::insert_into(message_text::table)
             .values(&message)
@@ -58,7 +60,7 @@ impl Database {
                 .filter(chats::columns::id.eq(chat.id))
                 .select(chats::columns::id)
                 .first::<i32>(&self.connection);
-            if let Err(_) = ret {
+            if ret.is_err() {
                 diesel::insert_into(chats::table)
                     .values(&chat)
                     .execute(&self.connection)
@@ -74,7 +76,7 @@ impl Database {
                 .filter(users::columns::id.eq(user.id))
                 .select(users::columns::id)
                 .first::<i32>(&self.connection);
-            if let Err(_) = ret {
+            if ret.is_err() {
                 diesel::insert_into(users::table)
                     .values(&user)
                     .execute(&self.connection)

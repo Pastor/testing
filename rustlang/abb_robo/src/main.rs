@@ -126,6 +126,7 @@ async fn test_leave(api: Api, message: Message) -> Result<(), Error> {
     Ok(())
 }
 
+#[allow(clippy::single_match)]
 async fn test(api: Api, message: Message) -> Result<(), Error> {
     match message.kind {
         MessageKind::Text { ref data, .. } => match data.as_str() {
@@ -152,7 +153,7 @@ async fn test(api: Api, message: Message) -> Result<(), Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let mut db = Database::new();
+    let mut db = Database::default();
 
     let file_appender = tracing_appender::rolling::hourly("logs", "features.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
@@ -174,13 +175,8 @@ async fn main() -> Result<(), Error> {
     };
 
     let mut client: abbrws::Client = connect().unwrap();
-    let _ok = match block_on(client.login()) {
-        Ok(_) => match block_on(client.mastership_request()) {
-            Ok(_) => true,
-            _ => false,
-        },
-        _ => false,
-    };
+    block_on(client.login()).unwrap();
+    block_on(client.mastership_request()).unwrap();
 
     while let Some(update) = stream.next().await {
         let update = update?;
@@ -208,11 +204,12 @@ async fn main() -> Result<(), Error> {
             UpdateKind::Unknown => tracing::error!("Unknown"),
         }
     }
+    block_on(client.mastership_release()).unwrap();
     Ok(())
 }
 
-fn recv_message(api: Api, db: &mut Database, message: Message) {
-    tracing::info!("{:?}", message.clone());
+fn recv_message(_api: Api, db: &mut Database, message: Message) {
+    tracing::info!("{:?}", message);
     let id: Integer = message.from.id.into();
     db.add_user(User {
         id: id as i32,
@@ -254,8 +251,9 @@ fn recv_message(api: Api, db: &mut Database, message: Message) {
     }
 }
 
-fn recv_post(api: Api, db: &mut Database, post: ChannelPost) {
-    tracing::info!("{:?}", post.clone());
+#[allow(clippy::single_match)]
+fn recv_post(_api: Api, db: &mut Database, post: ChannelPost) {
+    tracing::info!("{:?}", post);
     let channel = post.chat.clone();
     let id: Integer = channel.id.into();
     db.add_chat(Chat {
