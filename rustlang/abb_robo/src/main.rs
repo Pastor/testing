@@ -1,36 +1,35 @@
-#[macro_use]
-extern crate diesel;
-#[macro_use]
-extern crate serde_derive;
 extern crate abbrws;
 extern crate bloom;
+#[macro_use]
+extern crate diesel;
 extern crate hyper;
+#[macro_use]
+extern crate serde_derive;
 extern crate serde_json;
 
-use structopt::clap::AppSettings;
-use structopt::StructOpt;
-
+use std::panic::PanicInfo;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{env, panic};
 
+use abbrws::Client;
+use futures::executor::block_on;
 use futures::StreamExt;
+use structopt::clap::AppSettings;
+use structopt::StructOpt;
 use telegram_bot::prelude::*;
 use telegram_bot::{Api, ChannelPost, Error, Integer, Message, MessageKind, ParseMode, UpdateKind};
+use telegram_bot_raw::MessageChat;
 use tokio::time::sleep;
 use tracing::Level;
+
+pub use crate::db::*;
+pub use crate::models::*;
 
 pub mod cache;
 pub mod db;
 pub mod models;
 pub mod schema;
-
-pub use crate::db::*;
-pub use crate::models::*;
-use abbrws::Client;
-use futures::executor::block_on;
-use std::panic::PanicInfo;
-use std::sync::{Arc, Mutex};
-use telegram_bot_raw::MessageChat;
 
 async fn test_message(api: Api, message: Message) -> Result<(), Error> {
     api.send(message.text_reply("Simple message")).await?;
@@ -158,11 +157,12 @@ async fn test(api: Api, message: Message) -> Result<(), Error> {
 async fn main() -> Result<(), Error> {
     let mut db = Database::default();
 
-    let file_appender = tracing_appender::rolling::hourly("logs", "features.log");
+    let file_appender = tracing_appender::rolling::hourly("logs", "features.jsonl");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     let subscriber = tracing_subscriber::fmt()
         .with_writer(non_blocking)
         .with_max_level(Level::INFO)
+        .json()
         .finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
     let token = env::var("TELEGRAM_BOT_TOKEN").expect("TELEGRAM_BOT_TOKEN not set");
@@ -178,13 +178,19 @@ async fn main() -> Result<(), Error> {
     };
 
     let client: Arc<Mutex<Client>> = Arc::new(Mutex::new(connect().unwrap()));
-    block_on(client.lock().unwrap().login()).unwrap();
-    block_on(client.lock().unwrap().mastership_request()).unwrap();
+    event_abb_result("login", block_on(client.lock().unwrap().login()));
+    event_abb_result(
+        "mastership_request",
+        block_on(client.lock().unwrap().mastership_request()),
+    );
 
     let cc = Arc::clone(&client);
     panic::set_hook(Box::new(move |info: &PanicInfo| {
         tracing::error!("{:?}", info);
-        block_on(cc.lock().unwrap().mastership_release()).unwrap();
+        event_abb_result(
+            "mastership_release",
+            block_on(cc.lock().unwrap().mastership_release()),
+        );
     }));
 
     while let Some(update) = stream.next().await {
@@ -213,7 +219,10 @@ async fn main() -> Result<(), Error> {
             UpdateKind::Unknown => tracing::error!("Unknown"),
         }
     }
-    block_on(client.lock().unwrap().mastership_release()).unwrap();
+    event_abb_result(
+        "mastership_release",
+        block_on(client.lock().unwrap().mastership_release()),
+    );
     Ok(())
 }
 
@@ -282,6 +291,13 @@ fn recv_post(_api: Api, db: &mut Database, post: ChannelPost) {
             creator: None,
         }),
         _ => (),
+    }
+}
+
+fn event_abb_result(name: &'static str, result: Result<(), abbrws::Error>) {
+    match result {
+        Ok(_) => tracing::debug!("ABB[{}]: success", name),
+        Err(err) => tracing::error!("ABB[{}]: {:?}", name, err),
     }
 }
 

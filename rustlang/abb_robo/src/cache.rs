@@ -1,5 +1,6 @@
-use bloom::BloomFilter;
 use std::cell::RefCell;
+
+use bloom::BloomFilter;
 
 pub(crate) struct Cache {
     filter: RefCell<BloomFilter>,

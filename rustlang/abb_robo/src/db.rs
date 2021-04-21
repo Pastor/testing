@@ -1,12 +1,13 @@
+use std::cell::RefCell;
+use std::env;
+use std::path::PathBuf;
+
 use diesel::prelude::*;
 use dotenv::dotenv;
-use std::env;
 
 use crate::cache::Cache;
 pub use crate::models::*;
 pub use crate::schema::*;
-use std::cell::RefCell;
-use std::path::PathBuf;
 
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();

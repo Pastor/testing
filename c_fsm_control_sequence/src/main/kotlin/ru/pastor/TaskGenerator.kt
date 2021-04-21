@@ -3,7 +3,6 @@ package ru.pastor
 import java.io.FileOutputStream
 import java.io.PrintStream
 import java.util.*
-import java.util.function.Function
 import kotlin.collections.HashMap
 import kotlin.random.Random
 
@@ -142,7 +141,11 @@ class TaskGenerator private constructor(builder: Builder) {
                 }
                 if (printDot)
                     stream.print(", ")
-                stream.print("(p_{$index}, p_{$error})")
+                if (error == index) {
+                    stream.print("(p_{$index}, p_1)")
+                } else {
+                    stream.print("(p_{$index}, p_{$error})")
+                }
                 hasDot = true
                 ++printedElement
             }
@@ -207,7 +210,7 @@ fun main() {
     val generator = TaskGenerator.Builder().build()
 
     val output = PrintStream(FileOutputStream("questions.tex"))
-    for (z in 1..99) {
+    for (z in 1..208) {
         output.println("\\newpage")
         output.println("\\subsection{Задание №$z}")
         output.println()
