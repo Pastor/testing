@@ -2,10 +2,10 @@
 extern crate libc;
 
 use core::mem;
-use libc::{size_t};
-use std::os::raw::{c_int, c_char, c_double};
-use std::ffi::c_void;
+use libc::size_t;
 use std::cell::RefCell;
+use std::ffi::c_void;
+use std::os::raw::{c_char, c_double, c_int};
 use std::ptr::null;
 
 const VT_DOUBLE: i8 = 0;
@@ -39,7 +39,6 @@ thread_local! {
     static STATE_5_DEFAULT: RefCell<c_double> = RefCell::new(0.);
 
 }
-
 
 #[repr(u8)]
 enum Action {
@@ -90,12 +89,13 @@ impl From<c_int> for Action {
             12 => Action::InitAlgState,
             13 => Action::Stop,
             14 => Action::InitObjects,
-            _ => Action::Stop
+            _ => Action::Stop,
         }
     }
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct TypeState {
     v_: c_double,
     v1: c_double,
@@ -109,6 +109,7 @@ type TypeConst = c_char;
 type TypeLocal = c_char;
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct ExtVarInfoRecord {
     name: *const u8,
     data_type: c_int,
@@ -122,6 +123,7 @@ pub struct ExtVarInfoRecord {
 
 /* Описание структуры для доступа к специальным переменным и методам решателя */
 #[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct SolverStruct {
     layer_context: *const c_void,
     /* Указатель на контекст решателя */
@@ -157,11 +159,17 @@ pub struct SolverStruct {
     /* Эти методы используются для того чтобы зарегситрировать и удалить
     специализированные объекты схемы (например распределённый решатель лин. уравнений)
     Найти глобальный объект по имени    */
-    find_global_object: extern fn(layer_context: *const c_void, global_object_name: *const u8) -> *const c_void,
+    find_global_object:
+    extern "C" fn(layer_context: *const c_void, global_object_name: *const u8) -> *const c_void,
     /* Зарегистрировать новый глобальный объект */
-    register_global_object: extern fn(layer_context: *const c_void, global_object_name: *const u8, new_object_name: *const c_void, destructor: extern fn(*const c_void) -> c_int) -> *const c_void,
+    register_global_object: extern "C" fn(
+        layer_context: *const c_void,
+        global_object_name: *const u8,
+        new_object_name: *const c_void,
+        destructor: extern "C" fn(*const c_void) -> c_int,
+    ) -> *const c_void,
     /* Регистрация нужной библиотеки и получение от неё функций */
-    do_load_need_plugin: extern fn(plugin_name: *const u8) -> *const c_int,
+    do_load_need_plugin: extern "C" fn(plugin_name: *const u8) -> *const c_int,
     /* Флаг необходимости повторного шага  */
     f_need_iter: c_char,
     /* Контрольная сумма структуры текущей схемы (для проверки совпадения со сгенерированным кодом) */
@@ -189,9 +197,14 @@ pub struct SolverStruct {
     /* Указатель контекста задачи, необходимый для некоторых функций */
     task_context: *const c_void,
     /* Функция поиска указателя на данные по имени объекта, возврат = тип данных, и указатель */
-    get_data_ptr: extern fn(task_context: *const c_void, signal_name: *const u8, data_ptr: *mut *mut c_void, dimension: *mut c_int) -> c_char,
+    get_data_ptr: extern "C" fn(
+        task_context: *const c_void,
+        signal_name: *const u8,
+        data_ptr: *mut *mut c_void,
+        dimension: *mut c_int,
+    ) -> c_char,
     /* Проверка необходимости принудительной остановки  */
-    stop_check: extern fn(task_context: *const c_void) -> c_char,
+    stop_check: extern "C" fn(task_context: *const c_void) -> c_char,
     /* Флаг - блоки записи выполнять только на шаге синхронизации */
     write_signals_on_sync_step: c_char,
     /* Флаг - транслировать сигналы из\в внешней исполнительной системы */
@@ -211,8 +224,8 @@ pub struct SolverStruct {
     /* Количество текущих локальных итераций (для распределённого анализа точности) */
     n_local_iter: c_int,
     /* Флаг - делать дополнительные пробные шаги для внутренних итераций модели
-       При наличии блоков анализа точности и повтора расчёта надо выставить этот флаг, чтобы
-       перед выполнением f_GoodStep делался f_UpdateOuts с тем же шагом интегрирования  */
+    При наличии блоков анализа точности и повтора расчёта надо выставить этот флаг, чтобы
+    перед выполнением f_GoodStep делался f_UpdateOuts с тем же шагом интегрирования  */
     f_need_update_outs_before_good_step: c_char,
     /* Флаг - использовать уточнение шага для разрывных источников сигнала */
     f_precise_src_step: c_char,
@@ -226,21 +239,21 @@ pub extern "C" fn tick(c: size_t) -> size_t {
 }
 
 /* Для начала при вызове библиотеки надо сгенерировать структуры для хранения переменных
-  n_ext_vars     - возвращает к-во необходимых внешних переменных (записей в списке)
-  n_din_vars     - количество динамических переменных (записей в списке)
-  n_alg_vars     - количество алгебраических переменных (записей в списке)
-  n_state_vars   - к-во переменных состояния (записей в списке)
-  n_consts       - к-во констант
-  sizeof_state_vars - размер памяти по переменные состояния (память выделяется упраляющей программой)
-  sizeof_consts  - размер памяти под константы
-  sizeof_local_vars - размер памяти под локальные переменные
-  din_vars_dim   - суммарная размерность массива переменных состояния
-  alg_vars_dim   - ---//--- алгебраических переменных
-  ext_vars_info - возвращает указатель на список имён внешних переменных
-  din_vars_info - возвращает указатель на список имён динамических переменных
-  alg_vars_info - возвращает указатель на список имён алгебраических переменных
-  state_vars_info - возвращает указатель на список имён переменных состояния
-  const_info - возвращает указатель на список имён констант */
+n_ext_vars     - возвращает к-во необходимых внешних переменных (записей в списке)
+n_din_vars     - количество динамических переменных (записей в списке)
+n_alg_vars     - количество алгебраических переменных (записей в списке)
+n_state_vars   - к-во переменных состояния (записей в списке)
+n_consts       - к-во констант
+sizeof_state_vars - размер памяти по переменные состояния (память выделяется упраляющей программой)
+sizeof_consts  - размер памяти под константы
+sizeof_local_vars - размер памяти под локальные переменные
+din_vars_dim   - суммарная размерность массива переменных состояния
+alg_vars_dim   - ---//--- алгебраических переменных
+ext_vars_info - возвращает указатель на список имён внешних переменных
+din_vars_info - возвращает указатель на список имён динамических переменных
+alg_vars_info - возвращает указатель на список имён алгебраических переменных
+state_vars_info - возвращает указатель на список имён переменных состояния
+const_info - возвращает указатель на список имён констант */
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn INFO_FUNC(
@@ -307,7 +320,6 @@ pub extern "C" fn INFO_FUNC(
             });
         });
 
-
         OUTPUT_1_DEFAULT.try_with(|input| {
             record.push(ExtVarInfoRecord {
                 name: "out:0".as_ptr(),
@@ -337,9 +349,7 @@ pub extern "C" fn INFO_FUNC(
         *n_ext_vars = record.len() as c_int;
         *ext_vars_info = record.as_mut_ptr().cast();
 
-        SCHEMA_HASH.try_with(|hash| {
-            *scheme_hash32 = *hash.borrow_mut() as i32
-        })
+        SCHEMA_HASH.try_with(|hash| *scheme_hash32 = *hash.borrow_mut() as i32)
     });
 
     STATE_VARS_NAMES.try_with(|s| unsafe {
@@ -428,15 +438,15 @@ pub extern "C" fn INFO_FUNC(
 }
 
 /* Функция установки начального состояния
- step           - шаг расчёта
- modeltime      - текущее модельное время (если не используется - то всегда 0)
- ext_vars_addr  - адрес массива адресов внешних переменных
- din_vars       - адрес массива динамических переменных
- derivates      - адрес массива производных динамических переменных
- alg_vars       - адрес массива алгебраических переменных
- alg_funcs      - адрес массива значений алгебраических функций
- state_vars     - адрес структуры с внутренними переменными
- consts         - адрес структуры с константами */
+step           - шаг расчёта
+modeltime      - текущее модельное время (если не используется - то всегда 0)
+ext_vars_addr  - адрес массива адресов внешних переменных
+din_vars       - адрес массива динамических переменных
+derivates      - адрес массива производных динамических переменных
+alg_vars       - адрес массива алгебраических переменных
+alg_funcs      - адрес массива значений алгебраических функций
+state_vars     - адрес структуры с внутренними переменными
+consts         - адрес структуры с константами */
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn INIT_FUNC(
@@ -492,9 +502,12 @@ alg_funcs      - адрес массива алгебраических функ
 state_vars     - адрес структуры с внутренними переменными
 consts         - адрес структуры с константами
 locals         - адрес структуры с временными переменными */
+///
+/// # Safety
+///
 #[allow(non_snake_case)]
 #[no_mangle]
-pub extern "C" fn RUN_FUNC(
+pub unsafe extern "C" fn RUN_FUNC(
     action: c_int,
     step: c_double,
     modeltime: c_double,
@@ -509,16 +522,16 @@ pub extern "C" fn RUN_FUNC(
     solver_data: *mut SolverStruct,
     algo_object_id: *mut c_void,
 ) -> c_int {
-    return match Action::from(action) {
+    tracing::warn!("{:#?}", *state_vars);
+    match Action::from(action) {
         Action::Stop | Action::GetDeri | Action::GetAlgFun => 0,
-        _ => unsafe {
+        _ => {
             (*state_vars).o1 = (*state_vars).v1 + (*state_vars).v2 + (*state_vars).v3;
             (*state_vars).o2 = (*state_vars).o1 + 1f64;
             0
         }
-    };
+    }
 }
-
 
 #[allow(non_snake_case)]
 #[no_mangle]
@@ -539,5 +552,3 @@ pub extern "C" fn STATE_FUNC(
 ) -> c_int {
     0
 }
-
-

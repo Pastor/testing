@@ -3,7 +3,7 @@ extern crate libc;
 use libc::size_t;
 
 #[link(name = "simintech")]
-extern {
+extern "C" {
     fn tick(c: size_t) -> size_t;
 }
 
