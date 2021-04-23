@@ -95,6 +95,13 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
+///
+/// # Example
+///
+///```
+/// event_abb_result("none", Ok(()));
+/// ```
+///
 fn event_abb_result(name: &'static str, result: Result<(), abbrws::Error>) {
     match result {
         Ok(_) => tracing::debug!("ABB[{}]: success", name),

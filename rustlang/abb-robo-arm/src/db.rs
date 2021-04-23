@@ -41,8 +41,8 @@ impl Default for Database {
     fn default() -> Self {
         Database {
             connection: establish_connection(),
-            user_cache: RefCell::new(Cache::default()),
-            chat_cache: RefCell::new(Cache::default()),
+            user_cache: RefCell::new(Cache::new_capacity(10000000)),
+            chat_cache: RefCell::new(Cache::new_capacity(100000)),
         }
     }
 }

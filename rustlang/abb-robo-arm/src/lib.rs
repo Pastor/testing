@@ -164,6 +164,9 @@ pub fn recv_message(_api: Api, db: &mut Database, message: Message) {
             chat: None,
             creator: Some(id as i32),
         }),
+        MessageKind::Location { ref data } => {
+            tracing::info!("{:#?}", data)
+        }
         none => {
             tracing::info!("{:#?}", none)
         }
