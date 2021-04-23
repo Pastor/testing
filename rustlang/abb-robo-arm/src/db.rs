@@ -9,7 +9,7 @@ use crate::cache::Cache;
 pub use crate::models::*;
 pub use crate::schema::*;
 
-pub fn establish_connection() -> SqliteConnection {
+fn establish_connection() -> SqliteConnection {
     dotenv().ok();
     let database_url = match env::var("DATABASE_URL") {
         Ok(val) => val,

@@ -1,8 +1,19 @@
 [package]
-name = "abb_robo"
+name = "abb-robo-arm"
 version = "0.1.12"
 authors = ["Pastor <viruszold@gmail.com>"]
 edition = "2018"
+autobins = false
+
+[lib]
+name = "abb_robo_arm"
+crate-type = ["dylib", "rlib"]
+path="src/lib.rs"
+
+[[bin]]
+name = "abb-robo-telegram"
+test = false
+bench = false
 
 [features]
 openssl = ["hyper-tls"]
