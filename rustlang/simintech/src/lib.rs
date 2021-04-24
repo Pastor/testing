@@ -1,5 +1,7 @@
 #![allow(unused_variables, unused_must_use, dead_code)]
 extern crate libc;
+#[macro_use]
+extern crate ctor;
 
 use core::mem;
 use libc::size_t;
@@ -7,6 +9,8 @@ use std::cell::RefCell;
 use std::ffi::c_void;
 use std::os::raw::{c_char, c_double, c_int};
 use std::ptr::null;
+use std::sync::atomic::{AtomicBool, Ordering};
+use tracing::Level;
 
 const VT_DOUBLE: i8 = 0;
 const VT_BOOL: i8 = 1;
@@ -105,8 +109,8 @@ pub struct TypeState {
     o2: c_double,
 }
 
-type TypeConst = c_char;
-type TypeLocal = c_char;
+pub type TypeConst = c_char;
+pub type TypeLocal = c_char;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -235,6 +239,7 @@ pub struct SolverStruct {
 
 #[no_mangle]
 pub extern "C" fn tick(c: size_t) -> size_t {
+    tracing::info!("tick({:?})", c);
     c + 1
 }
 
@@ -447,9 +452,13 @@ alg_vars       - адрес массива алгебраических пере
 alg_funcs      - адрес массива значений алгебраических функций
 state_vars     - адрес структуры с внутренними переменными
 consts         - адрес структуры с константами */
+///
+/// # Safety
+///
+///
 #[allow(non_snake_case)]
 #[no_mangle]
-pub extern "C" fn INIT_FUNC(
+pub unsafe extern "C" fn INIT_FUNC(
     step: c_double,
     modeltime: c_double,
     ext_vars_addr: *mut *mut c_void,
@@ -463,6 +472,8 @@ pub extern "C" fn INIT_FUNC(
     solver_data: *mut SolverStruct,
     algo_object_id: *mut c_void,
 ) -> c_int {
+    tracing::info!("{:#?}", *state_vars);
+
     STATE_0_DEFAULT.try_with(|s| {
         let mut state = s.borrow_mut();
         *state = 0 as c_double;
@@ -522,7 +533,7 @@ pub unsafe extern "C" fn RUN_FUNC(
     solver_data: *mut SolverStruct,
     algo_object_id: *mut c_void,
 ) -> c_int {
-    tracing::warn!("{:#?}", *state_vars);
+    tracing::info!("{:#?}", *state_vars);
     match Action::from(action) {
         Action::Stop | Action::GetDeri | Action::GetAlgFun => 0,
         _ => {
@@ -533,6 +544,25 @@ pub unsafe extern "C" fn RUN_FUNC(
     }
 }
 
+/// # Examples
+///
+/// ```
+/// use simintech::{TypeState, TypeConst, STATE_FUNC, TypeLocal};
+/// use std::ptr::null_mut;
+/// use std::os::raw::c_double;
+/// use std::cell::RefCell;
+///
+/// let mut ext_vars: RefCell<c_double> = RefCell::new(0.);
+/// let mut din_vars: RefCell<c_double> = RefCell::new(0.);
+/// let mut derivates: RefCell<c_double> = RefCell::new(0.);
+/// let mut alg_vars: RefCell<c_double> = RefCell::new(0.);
+/// let mut alg_funcs: RefCell<c_double> = RefCell::new(0.);
+/// let mut consts: RefCell<TypeConst> = RefCell::new(0);
+/// let mut locals: RefCell<TypeLocal> = RefCell::new(0);
+///
+/// STATE_FUNC(0, 0., 0., null_mut(), din_vars.as_ptr(), derivates.as_ptr(), alg_vars.as_ptr(), alg_funcs.as_ptr(),
+/// null_mut(), consts.as_ptr(), locals.as_ptr(), null_mut(), null_mut());
+/// ```
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn STATE_FUNC(
@@ -551,4 +581,20 @@ pub extern "C" fn STATE_FUNC(
     algo_object_id: *mut c_void,
 ) -> c_int {
     0
+}
+
+static INITED: AtomicBool = AtomicBool::new(false);
+
+//
+#[ctor]
+fn constructor() {
+    INITED.store(true, Ordering::SeqCst);
+    // let file_appender = tracing_appender::rolling::hourly("logs", "simintech.jsonl");
+    // let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    let subscriber = tracing_subscriber::fmt()
+        // .with_writer(non_blocking)
+        .with_max_level(Level::INFO)
+        .json()
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).unwrap();
 }

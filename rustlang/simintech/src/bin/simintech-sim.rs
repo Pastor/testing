@@ -1,6 +1,8 @@
 extern crate libc;
+extern crate rand;
 
 use libc::size_t;
+use rand::RngCore;
 
 #[link(name = "simintech")]
 extern "C" {
@@ -8,6 +10,8 @@ extern "C" {
 }
 
 fn main() {
-    let x = unsafe { tick(100) };
+    let x = unsafe {
+        let mut rng = rand::thread_rng();
+        tick(rng.next_u32() as size_t) };
     println!("Count: {}", x);
 }

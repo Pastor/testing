@@ -16,8 +16,10 @@ test = false
 bench = false
 
 [dependencies]
+ctor = "*"
 tracing = "^0.1.23"
 tracing-futures = "^0.2"
 tracing-appender = "^0.1"
 tracing-subscriber = "^0.2.15"
 libc = "*"
+rand = "*"
