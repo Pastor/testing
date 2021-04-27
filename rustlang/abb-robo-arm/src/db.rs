@@ -8,15 +8,16 @@ use dotenv::dotenv;
 use crate::cache::Cache;
 pub use crate::models::*;
 pub use crate::schema::*;
+use chrono::{DateTime, Utc, NaiveDateTime};
 
 fn establish_connection() -> SqliteConnection {
     dotenv().ok();
     let database_url = match env::var("DATABASE_URL") {
         Ok(val) => val,
         Err(_) => {
-            let home = match env::var("HOME") {
-                Ok(home) => home,
-                Err(_) => env::current_dir()
+            let home = match env::home_dir() {
+                Some(home) => home.display().to_string(),
+                None => env::current_dir()
                     .unwrap_or_else(|_| PathBuf::from("~"))
                     .to_str()
                     .unwrap()
@@ -86,4 +87,14 @@ impl Database {
             self.user_cache.get_mut().store(user.id)
         }
     }
+}
+
+#[allow(dead_code)]
+fn to_date_time(time: i64) -> DateTime<Utc> {
+    let naive = to_native_date_time(time);
+    return DateTime::from_utc(naive, Utc);
+}
+
+fn to_native_date_time(time: i64) -> NaiveDateTime {
+    return NaiveDateTime::from_timestamp(time, 0);
 }
