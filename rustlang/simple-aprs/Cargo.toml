@@ -1,0 +1,23 @@
+[package]
+name = "simple-aprs"
+version = "0.1.1"
+authors = ["Dnrei Khlebnikov <viruszold@gmail.com"]
+edition = "2018"
+description = "APRS Library to interact with APRS-IS servers"
+readme = "README.md"
+keywords = ["aprs", "amateur-radio"]
+license = "MIT"
+repository = "https://github.com/Pastor/testing.git"
+exclude = [".gitignore"]
+
+[dependencies]
+bytes = "*"
+aprs-parser = "*"
+futures = "*"
+log = "*"
+tokio = { version = "*", default-features=false, features=["macros", "net", "rt-multi-thread", "time"] }
+tokio-util = { version = "*", features = ["codec"] }
+
+[dev-dependencies]
+arguments = "*"
+pretty_env_logger = "*"
