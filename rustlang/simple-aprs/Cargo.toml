@@ -17,6 +17,7 @@ futures = "*"
 log = "*"
 tokio = { version = "*", default-features=false, features=["macros", "net", "rt-multi-thread", "time"] }
 tokio-util = { version = "*", features = ["codec"] }
+snailquote = "*"
 
 [dev-dependencies]
 arguments = "*"

@@ -1,19 +1,40 @@
+#[macro_use]
+extern crate log;
 extern crate pretty_env_logger;
+extern crate snailquote;
 
 use std::env;
+
+use aprs_parser::{APRSData, Timestamp};
 
 use simple_aprs::*;
 
 fn aprs_packet_handler(packet: APRSPacket) {
     match packet.parsed() {
         Ok(parsed) => {
-            println!("Source: {:#?}", parsed)
+            let position = match parsed.data {
+                APRSData::Position(pos) => {
+                    let comment = snailquote::unescape(pos.comment.as_str()).unwrap();
+                    let timestamp = match pos.timestamp {
+                        Some(timestamp) => match timestamp {
+                            Timestamp::DDHHMM(d, h, m) => format!("{:02}:{:02}:{:02}d", d, h, m),
+                            Timestamp::HHMMSS(h, m, s) => format!("{:02}:{:02}:{:02}h", h, m, s),
+                            Timestamp::Unsupported(text) => text,
+                        },
+                        None => String::from("00:00:00u")
+                    };
+                    format!("{:10};{:10};{:9};{}",
+                            pos.latitude, pos.longitude, timestamp, comment)
+                }
+                _ => String::new()
+            };
+            info!("From: {:6}, To: {:6}, Position: {:?}", parsed.from.call, parsed.to.call, position)
         }
         Err(err) => {
-            println!("Error parsing packet: {:?}", err);
+            error!("Error parsing packet: {:?}. Data: {:?}", err, packet.raw.clone());
             match String::from_utf8(packet.raw) {
-                Ok(msg) => println!("{:?}", msg),
-                Err(err) => println!("Error converting APRS packet to UTF8: {}", err),
+                Ok(msg) => warn!("{:?}", msg),
+                Err(err) => error!("Error converting APRS packet to UTF8: {}", err),
             }
         }
     }
@@ -22,7 +43,10 @@ fn aprs_packet_handler(packet: APRSPacket) {
 ///http://www.aprs-is.net/javAPRSFilter.aspx
 ///
 fn main() {
-    pretty_env_logger::init();
+    let env = pretty_env_logger::env_logger::Env::default()
+        .filter_or(pretty_env_logger::env_logger::DEFAULT_FILTER_ENV, "info");
+    pretty_env_logger::env_logger::Builder::from_env(env)
+        .init();
 
     let args = arguments::parse(env::args()).unwrap();
 
@@ -40,7 +64,7 @@ fn main() {
     let aprs_is = IS::new(settings, aprs_packet_handler);
 
     match aprs_is.connect() {
-        Ok(()) => println!("Disconnected"),
-        Err(err) => println!("An error occured: {}", err),
+        Ok(()) => info!("Disconnected"),
+        Err(err) => error!("An error occured: {}", err),
     }
 }

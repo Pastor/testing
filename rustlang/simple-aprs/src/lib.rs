@@ -19,8 +19,10 @@ pub struct APRSPacket {
 
 impl APRSPacket {
     pub fn parsed(&self) -> Result<APRSMessage, APRSError> {
-        let str = String::from_utf8(self.raw.clone()).unwrap();
-        aprs_parser::parse(str.as_str())
+        match String::from_utf8(self.raw.clone()) {
+            Ok(result) => aprs_parser::parse(result.as_str()),
+            Err(_) => Err(APRSError::InvalidMessage("Can't parse message".to_string()))
+        }
     }
 }
 
@@ -136,7 +138,6 @@ impl IS {
                 }
             }
         }
-
         Ok(())
     }
 }
