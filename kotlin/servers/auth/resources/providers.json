@@ -1,0 +1,10 @@
+[
+  {
+    "name": "twitter",
+    "request_token_url": "https://api.twitter.com/oauth/request_token",
+    "authorize_url": "https://api.twitter.com/oauth/authorize",
+    "access_token_url": "https://api.twitter.com/oauth/access_token",
+    "client_id": "***",
+    "client_secret": "***"
+  }
+]

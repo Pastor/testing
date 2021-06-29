@@ -11,6 +11,7 @@ use std::os::raw::{c_char, c_double, c_int};
 use std::ptr::null;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::Level;
+use std::io;
 
 const VT_DOUBLE: i8 = 0;
 const VT_BOOL: i8 = 1;
@@ -592,7 +593,7 @@ fn constructor() {
     // let file_appender = tracing_appender::rolling::hourly("logs", "simintech.jsonl");
     // let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     let subscriber = tracing_subscriber::fmt()
-        // .with_writer(non_blocking)
+        .with_writer(io::stderr)
         .with_max_level(Level::INFO)
         .json()
         .finish();
