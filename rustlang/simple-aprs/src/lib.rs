@@ -21,12 +21,20 @@ impl APRSPacket {
     pub fn parsed(&self) -> Result<APRSMessage, APRSError> {
         match String::from_utf8(self.raw.clone()) {
             Ok(result) => aprs_parser::parse(result.as_str()),
-            Err(_) => Err(APRSError::InvalidMessage("Can't parse message".to_string()))
+            Err(_) => {
+                let buf = self.raw.clone();
+                let result = buf.iter()
+                    .fold(String::new(), |mut acc, x| {
+                        acc.push(char::from(*x));
+                        acc
+                    });
+                aprs_parser::parse(result.as_str())
+            }
         }
     }
 }
 
-pub struct ISSettings {
+pub struct Settings {
     pub host: String,
     pub port: u16,
     pub callsign: String,
@@ -34,15 +42,15 @@ pub struct ISSettings {
     pub filter: String,
 }
 
-impl ISSettings {
+impl Settings {
     pub fn new(
         host: String,
         port: u16,
         callsign: String,
         passcode: String,
         filter: String,
-    ) -> ISSettings {
-        ISSettings {
+    ) -> Settings {
+        Settings {
             host,
             port,
             callsign,
@@ -54,14 +62,14 @@ impl ISSettings {
 
 pub type PacketHandler = fn(APRSPacket);
 
-pub struct IS {
-    settings: ISSettings,
+pub struct Client {
+    settings: Settings,
     packet_handler: PacketHandler,
 }
 
-impl IS {
-    pub fn new(settings: ISSettings, packet_handler: PacketHandler) -> IS {
-        IS {
+impl Client {
+    pub fn new(settings: Settings, packet_handler: PacketHandler) -> Client {
+        Client {
             settings,
             packet_handler,
         }
@@ -96,7 +104,7 @@ impl IS {
             )
         };
 
-        info!("Logging on to APRS-IS server");
+        info!("Logging on to APRS server");
         trace!("Login message: {}", login_message);
         writer.send(login_message.as_bytes()).await?;
 
@@ -104,7 +112,7 @@ impl IS {
             let mut interval = time::interval(Duration::from_secs(3600));
             loop {
                 interval.tick().await;
-                info!("Sending keep alive message to APRS-IS server");
+                info!("Sending keep alive message to APRS server");
                 writer.send("# keep alive".as_bytes()).await.unwrap();
             }
         });
@@ -117,11 +125,11 @@ impl IS {
                             Ok(server_message) => {
                                 trace!("Received server response: {}", server_message);
                                 if server_message.contains("unverified") {
-                                    info!("User not verified on APRS-IS server");
+                                    info!("User not verified on APRS server");
                                     continue;
                                 }
                                 if server_message.contains(" verified") {
-                                    info!("User verified on APRS-IS server");
+                                    info!("User verified on APRS server");
                                 }
                             }
                             Err(err) => warn!("Error processing server response: {}", err),
@@ -134,7 +142,7 @@ impl IS {
                     }
                 }
                 Err(err) => {
-                    warn!("Error processing packet from APRS-IS server: {}", err);
+                    warn!("Error processing packet from APRS server: {}", err);
                 }
             }
         }

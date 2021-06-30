@@ -12,7 +12,7 @@ use simple_aprs::*;
 fn aprs_packet_handler(packet: APRSPacket) {
     match packet.parsed() {
         Ok(parsed) => {
-            let position = match parsed.data {
+            let data = match parsed.data {
                 APRSData::Position(pos) => {
                     let comment = snailquote::unescape(pos.comment.as_str()).unwrap();
                     let timestamp = match pos.timestamp {
@@ -23,14 +23,14 @@ fn aprs_packet_handler(packet: APRSPacket) {
                         },
                         None => String::from("00:00:00u")
                     };
-                    format!("{:10};{:10};{:9};{}",
+                    format!("{:010};{:010};{:9};{}",
                             pos.latitude, pos.longitude, timestamp, comment)
                 }
                 _ => String::new()
             };
-            info!("From: {:6}, To: {:6}, Position: {:?}", parsed.from.call, parsed.to.call, position)
+            info!("From: {:6}, To: {:6}, Data: {:?}", parsed.from.call, parsed.to.call, data)
         }
-        Err(err) => {
+            Err(err) => {
             error!("Error parsing packet: {:?}. Data: {:?}", err, packet.raw.clone());
             match String::from_utf8(packet.raw) {
                 Ok(msg) => warn!("{:?}", msg),
@@ -53,7 +53,7 @@ fn main() {
     let callsign = args.get::<String>("callsign").unwrap();
     let passcode = args.get::<String>("passcode").unwrap();
 
-    let settings = ISSettings::new(
+    let settings = Settings::new(
         "euro.aprs2.net".to_string(),
         14580,
         callsign.to_string(),
@@ -61,7 +61,7 @@ fn main() {
         "r/55/37/100".to_string(),
     );
 
-    let aprs_is = IS::new(settings, aprs_packet_handler);
+    let aprs_is = Client::new(settings, aprs_packet_handler);
 
     match aprs_is.connect() {
         Ok(()) => info!("Disconnected"),
